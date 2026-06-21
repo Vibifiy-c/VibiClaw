@@ -1,157 +1,155 @@
-use eframe::egui;
-use egui::*;
-use super::{VibiApp, Tab, theme::Theme};
+use gtk4::prelude::*;
+use gtk4::{Box as GtkBox, Button, Label, Orientation, Separator, Align};
+use std::rc::Rc;
+use std::cell::Cell;
 
-pub fn draw(ui: &mut egui::Ui, app: &mut VibiApp, t: &Theme) {
-    // ---- header ----
-    Frame::none()
-        .inner_margin(Margin::symmetric(16.0, 16.0))
-        .show(ui, |ui| {
-            ui.set_min_height(38.0);
-            ui.horizontal(|ui| {
-                let (rect, _) = ui.allocate_exact_size(vec2(32.0, 32.0), Sense::hover());
-                ui.painter().rect_filled(rect, Rounding::same(8.0), t.accent());
+pub fn build_sidebar() -> GtkBox {
+    let sidebar = GtkBox::new(Orientation::Vertical, 0);
+sidebar.add_css_class("sidebar");
+sidebar.set_width_request(260);
+sidebar.set_hexpand(false);
 
-                if !app.sidebar_collapsed {
-                    ui.add_space(10.0);
-                    ui.label(RichText::new("Vibi ").color(t.text()).size(16.0));
-                    ui.label(RichText::new("AI").color(t.accent()).size(16.0));
 
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        let toggle = ui.add(
-                            Button::new(RichText::new("☰").size(16.0).color(t.text_secondary()))
-                                .frame(false),
-                        );
-                        if toggle.clicked() {
-                            app.sidebar_collapsed = !app.sidebar_collapsed;
-                        }
-                    });
-                }
-            });
-        });
-    ui.separator();
+    let header = GtkBox::new(Orientation::Horizontal, 8);
+    header.set_margin_top(16);
+    header.set_margin_bottom(16);
+    header.set_margin_start(16);
+    header.set_margin_end(16);
 
-    if app.sidebar_collapsed {
-        ui.add_space(12.0);
-        ui.vertical_centered(|ui| {
-            let toggle = ui.add(Button::new(RichText::new("☰").color(t.text_secondary())).frame(false));
-            if toggle.clicked() {
-                app.sidebar_collapsed = false;
-            }
-        });
-        return;
-    }
+    let logo_icon = GtkBox::new(Orientation::Horizontal, 0);
+    logo_icon.add_css_class("logo-icon");
+    logo_icon.set_size_request(32, 32);
+    header.append(&logo_icon);
 
-    // ---- new chat button ----
-    Frame::none()
-        .inner_margin(Margin::symmetric(8.0, 12.0))
-        .show(ui, |ui| {
-            let btn = Button::new(RichText::new("+  New chat").color(Color32::WHITE).size(13.0))
-                .fill(t.accent())
-                .min_size(vec2(ui.available_width(), 34.0))
-                .rounding(8.0);
-            if ui.add(btn).clicked() {
-                // TODO: new chat
-            }
-        });
+    let logo_vibi = Label::new(Some("Vibi "));
+    logo_vibi.add_css_class("logo-text-vibi");
+    header.append(&logo_vibi);
 
-    // ---- nav menu ----
-    Frame::none()
-        .inner_margin(Margin::symmetric(8.0, 12.0))
-        .show(ui, |ui| {
-            nav_item(ui, app, t, Tab::Chat, "Chat");
-            nav_item(ui, app, t, Tab::Agentic, "Agentic Tool");
-            nav_item_badge(ui, app, t, Tab::Notebook, "AI Notebook", "WEB");
-        });
-    ui.separator();
+    let logo_ai = Label::new(Some("AI"));
+    logo_ai.add_css_class("logo-text-ai");
+    header.append(&logo_ai);
 
-    // ---- recent chats ----
-    Frame::none()
-        .inner_margin(Margin::symmetric(8.0, 12.0))
-        .show(ui, |ui| {
-            ui.label(
-                RichText::new("RECENT CHATS")
-                    .color(t.text_muted())
-                    .size(10.0),
-            );
-            ui.add_space(6.0);
-            ScrollArea::vertical().show(ui, |_ui| {
-                // chat list — empty for now
-            });
-        });
+    let header_spacer = GtkBox::new(Orientation::Horizontal, 0);
+    header_spacer.set_hexpand(true);
+    header.append(&header_spacer);
 
-    let remaining = ui.available_height();
-    if remaining > 96.0 {
-        ui.add_space(remaining - 96.0);
-    }
+    let toggle_btn = Button::with_label("☰");
+    toggle_btn.add_css_class("footer-btn");
+    header.append(&toggle_btn);
 
-    // ---- footer ----
-    ui.separator();
-    Frame::none()
-        .inner_margin(Margin::symmetric(8.0, 12.0))
-        .show(ui, |ui| {
-            ui.vertical(|ui| {
-                let label = if app.dark_mode { "☀  Toggle theme" } else { "🌙  Toggle theme" };
-                let btn = Button::new(RichText::new(label).color(t.text_secondary()).size(13.0))
-                    .fill(Color32::TRANSPARENT)
-                    .stroke(Stroke::new(1.0, t.border()))
-                    .min_size(vec2(ui.available_width(), 32.0))
-                    .rounding(7.0);
-                if ui.add(btn).clicked() {
-                    app.dark_mode = !app.dark_mode;
-                }
+    sidebar.append(&header);
+    sidebar.append(&Separator::new(Orientation::Horizontal));
 
-                ui.add_space(6.0);
+    let new_chat_btn = Button::with_label("+  New chat");
+    new_chat_btn.add_css_class("new-chat-btn");
+    new_chat_btn.set_margin_top(12);
+    new_chat_btn.set_margin_bottom(12);
+    new_chat_btn.set_margin_start(8);
+    new_chat_btn.set_margin_end(8);
+    sidebar.append(&new_chat_btn);
 
-                let btn2 = Button::new(RichText::new("⚙  Settings").color(t.text_secondary()).size(12.0))
-                    .fill(Color32::TRANSPARENT)
-                    .stroke(Stroke::new(1.0, t.border()))
-                    .min_size(vec2(ui.available_width(), 30.0))
-                    .rounding(7.0);
-                if ui.add(btn2).clicked() {
-                    // TODO: settings
-                }
-            });
-        });
+    let nav_box = GtkBox::new(Orientation::Vertical, 2);
+    nav_box.set_margin_start(8);
+    nav_box.set_margin_end(8);
+
+    let chat_btn = nav_item_button("Chat", None);
+    chat_btn.add_css_class("active");
+    nav_box.append(&chat_btn);
+
+    let agentic_btn = nav_item_button("Agentic Tool", None);
+    nav_box.append(&agentic_btn);
+
+    let notebook_btn = nav_item_button("AI Notebook", Some("WEB"));
+    nav_box.append(&notebook_btn);
+
+    sidebar.append(&nav_box);
+    sidebar.append(&Separator::new(Orientation::Horizontal));
+
+    let recent_label = Label::new(Some("RECENT CHATS"));
+    recent_label.add_css_class("sidebar-label");
+    recent_label.set_halign(Align::Start);
+    recent_label.set_margin_start(16);
+    recent_label.set_margin_top(12);
+    sidebar.append(&recent_label);
+
+    let spacer = GtkBox::new(Orientation::Vertical, 0);
+    spacer.set_vexpand(true);
+    sidebar.append(&spacer);
+
+    sidebar.append(&Separator::new(Orientation::Horizontal));
+
+    let footer = GtkBox::new(Orientation::Vertical, 6);
+    footer.set_margin_top(12);
+    footer.set_margin_bottom(12);
+    footer.set_margin_start(8);
+    footer.set_margin_end(8);
+
+    let theme_btn = Button::with_label("☀  Toggle theme");
+    theme_btn.add_css_class("footer-btn");
+    footer.append(&theme_btn);
+
+    let settings_btn = Button::with_label("⚙  Settings");
+    settings_btn.add_css_class("footer-btn");
+    footer.append(&settings_btn);
+
+    sidebar.append(&footer);
+
+    let collapsed = Rc::new(Cell::new(false));
+
+    let sidebar_clone = sidebar.clone();
+    let header_clone = header.clone();
+    let logo_icon_clone = logo_icon.clone();
+    let logo_vibi_clone = logo_vibi.clone();
+    let logo_ai_clone = logo_ai.clone();
+    let new_chat_btn_clone = new_chat_btn.clone();
+    let nav_box_clone = nav_box.clone();
+    let recent_label_clone = recent_label.clone();
+    let footer_clone = footer.clone();
+    let header_spacer_clone = header_spacer.clone();
+
+    toggle_btn.connect_clicked(move |_| {
+        let new_state = !collapsed.get();
+        collapsed.set(new_state);
+
+        logo_icon_clone.set_visible(!new_state);
+        logo_vibi_clone.set_visible(!new_state);
+        logo_ai_clone.set_visible(!new_state);
+        new_chat_btn_clone.set_visible(!new_state);
+        nav_box_clone.set_visible(!new_state);
+        recent_label_clone.set_visible(!new_state);
+        footer_clone.set_visible(!new_state);
+        header_spacer_clone.set_visible(!new_state);
+
+        if new_state {
+            sidebar_clone.set_width_request(52);
+            header_clone.set_margin_start(10);
+            header_clone.set_margin_end(10);
+        } else {
+            sidebar_clone.set_width_request(260);
+            header_clone.set_margin_start(16);
+            header_clone.set_margin_end(16);
+        }
+    });
+
+    sidebar
 }
 
-fn nav_item(ui: &mut egui::Ui, app: &mut VibiApp, t: &Theme, tab: Tab, label: &str) {
-    nav_item_inner(ui, app, t, tab, label, None);
-}
-fn nav_item_badge(ui: &mut egui::Ui, app: &mut VibiApp, t: &Theme, tab: Tab, label: &str, badge: &str) {
-    nav_item_inner(ui, app, t, tab, label, Some(badge));
-}
+fn nav_item_button(label_text: &str, badge: Option<&str>) -> Button {
+    let btn = Button::new();
+    btn.add_css_class("nav-item");
 
-fn nav_item_inner(ui: &mut egui::Ui, app: &mut VibiApp, t: &Theme, tab: Tab, label: &str, badge: Option<&str>) {
-    let active = app.active_tab == tab;
-    let bg = if active { t.accent_light() } else { Color32::TRANSPARENT };
-    let text_color = if active { t.accent() } else { t.text_secondary() };
+    let content = GtkBox::new(Orientation::Horizontal, 0);
+    let label = Label::new(Some(label_text));
+    label.set_halign(Align::Start);
+    label.set_hexpand(true);
+    content.append(&label);
 
-    let resp = Frame::none()
-        .fill(bg)
-        .rounding(7.0)
-        .inner_margin(Margin::symmetric(12.0, 10.0))
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(label).color(text_color).size(13.0));
-                if let Some(b) = badge {
-                    ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                        Frame::none()
-                            .fill(t.accent())
-                            .rounding(10.0)
-                            .inner_margin(Margin::symmetric(6.0, 2.0))
-                            .show(ui, |ui| {
-                                ui.label(RichText::new(b).color(Color32::WHITE).size(9.0));
-                            });
-                    });
-                }
-            });
-        });
-
-    let id = Id::new(("nav", label));
-    if ui.interact(resp.response.rect, id, Sense::click()).clicked() {
-        app.active_tab = tab;
+    if let Some(b) = badge {
+        let badge_label = Label::new(Some(b));
+        badge_label.add_css_class("badge-web");
+        content.append(&badge_label);
     }
-    ui.add_space(2.0);
+
+    btn.set_child(Some(&content));
+    btn
 }

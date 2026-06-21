@@ -1,0 +1,162 @@
+window {
+  background-color: #141414;
+}
+
+.sidebar {
+  background-color: #171717;
+}
+
+.main-area {
+  background-color: #141414;
+}
+
+.logo-icon {
+  background-color: #a020f0;
+  border-radius: 8px;
+}
+
+.logo-text-vibi {
+  color: #f0eeff;
+  font-size: 16px;
+}
+
+.logo-text-ai {
+  color: #a020f0;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.new-chat-btn {
+  background-color: #a020f0;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-weight: 500;
+}
+.new-chat-btn:hover {
+  background-color: #8e1cd9;
+}
+
+.nav-item {
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: #9d94c4;
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+.nav-item:hover {
+  background-color: #3d2b45;
+}
+.nav-item.active {
+  background-color: #3d2b45;
+  color: #a020f0;
+  font-weight: 500;
+}
+
+.sidebar-label {
+  color: #5c5480;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+}
+
+.footer-btn {
+  background-color: transparent;
+  background-image: none;
+  color: #9d94c4;
+  border: 1px solid #3f3f3f;
+  box-shadow: none;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.footer-btn:hover {
+  background-color: #3d2b45;
+  color: #f0eeff;
+}
+
+.badge-web {
+  background-color: #a020f0;
+  color: white;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 9px;
+}
+
+label.title {
+  color: #f0eeff;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.welcome-icon {
+  background-color: #a020f0;
+  border-radius: 14px;
+}
+
+.welcome-title {
+  color: #f0eeff;
+  font-size: 22px;
+  font-weight: 500;
+}
+
+.welcome-subtitle {
+  color: #9d94c4;
+  font-size: 14px;
+}
+
+.input-box {
+  background-color: #2f2f2f;
+  border: 1px solid #3f3f3f;
+  border-radius: 24px;
+  padding: 8px 12px;
+}
+
+.attach-btn {
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: #5c5480;
+  font-size: 16px;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 999px;
+}
+.attach-btn:hover {
+  background-color: #3d2b45;
+  color: #a020f0;
+}
+
+.chat-entry {
+  background-color: transparent;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: #f0eeff;
+  font-size: 14px;
+}
+
+.send-btn {
+  background-color: #a020f0;
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: white;
+  min-width: 36px;
+  min-height: 36px;
+  border-radius: 999px;
+}
+.send-btn:hover {
+  background-color: #8e1cd9;
+}
+
+.input-hint {
+  color: #5c5480;
+  font-size: 11px;
+}
