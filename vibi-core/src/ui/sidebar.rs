@@ -1,7 +1,8 @@
 use gtk4::prelude::*;
 use gtk4::{Box as GtkBox, Button, Label, Orientation, Separator, Align};
+use gtk4::glib;
 use std::rc::Rc;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 pub fn build_sidebar() -> GtkBox {
     let sidebar = GtkBox::new(Orientation::Vertical, 0);
@@ -52,14 +53,14 @@ sidebar.set_hexpand(false);
     nav_box.set_margin_start(8);
     nav_box.set_margin_end(8);
 
-    let chat_btn = nav_item_button("Chat", None);
+    let chat_btn = nav_item_button_with_icon("Chat", "💬", None);
     chat_btn.add_css_class("active");
     nav_box.append(&chat_btn);
 
-    let agentic_btn = nav_item_button("Agentic Tool", None);
+    let agentic_btn = nav_item_button_with_icon("Agentic Tool", "🕵️", None);
     nav_box.append(&agentic_btn);
 
-    let notebook_btn = nav_item_button("AI Notebook", Some("WEB"));
+    let notebook_btn = nav_item_button_with_icon("AI Notebook", "📓", Some("WEB"));
     nav_box.append(&notebook_btn);
 
     sidebar.append(&nav_box);
@@ -84,12 +85,31 @@ sidebar.set_hexpand(false);
     footer.set_margin_start(8);
     footer.set_margin_end(8);
 
-    let theme_btn = Button::with_label("☀  Toggle theme");
-    theme_btn.add_css_class("footer-btn");
+    let theme_btn = footer_button_with_icon("☀", "Toggle theme");
     footer.append(&theme_btn);
 
-    let settings_btn = Button::with_label("⚙  Settings");
-    settings_btn.add_css_class("footer-btn");
+    theme_btn.connect_clicked(move |btn| {
+        let window = btn.root().and_then(|r| r.downcast::<gtk4::ApplicationWindow>().ok());
+        if let Some(win) = window {
+            let is_light = !win.css_classes().iter().any(|c| c == "light");
+            if is_light {
+                win.add_css_class("light");
+            } else {
+                win.remove_css_class("light");
+            }
+            if let Some(child) = btn.child() {
+                if let Some(content) = child.downcast_ref::<GtkBox>() {
+                    if let Some(icon) = content.first_child() {
+                        if let Some(label) = icon.downcast_ref::<Label>() {
+                            label.set_text(if is_light { "☾" } else { "☀" });
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    let settings_btn = footer_button_with_icon("⚙", "Settings");
     footer.append(&settings_btn);
 
     sidebar.append(&footer);
@@ -106,10 +126,22 @@ sidebar.set_hexpand(false);
     let recent_label_clone = recent_label.clone();
     let footer_clone = footer.clone();
     let header_spacer_clone = header_spacer.clone();
+    let chat_btn_clone = chat_btn.clone();
+    let agentic_btn_clone = agentic_btn.clone();
+    let notebook_btn_clone = notebook_btn.clone();
+    let theme_btn_clone_anim = theme_btn.clone();
+    let settings_btn_clone = settings_btn.clone();
+
+    let counter = Rc::new(RefCell::new(0));
 
     toggle_btn.connect_clicked(move |_| {
         let new_state = !collapsed.get();
         collapsed.set(new_state);
+
+        let start_width = if new_state { 260 } else { 52 };
+        let end_width = if new_state { 52 } else { 260 };
+        let start_margin = if new_state { 16 } else { 10 };
+        let end_margin = if new_state { 10 } else { 16 };
 
         logo_icon_clone.set_visible(!new_state);
         logo_vibi_clone.set_visible(!new_state);
@@ -120,25 +152,54 @@ sidebar.set_hexpand(false);
         footer_clone.set_visible(!new_state);
         header_spacer_clone.set_visible(!new_state);
 
-        if new_state {
-            sidebar_clone.set_width_request(52);
-            header_clone.set_margin_start(10);
-            header_clone.set_margin_end(10);
-        } else {
-            sidebar_clone.set_width_request(260);
-            header_clone.set_margin_start(16);
-            header_clone.set_margin_end(16);
-        }
+        hide_nav_labels(&chat_btn_clone, new_state);
+        hide_nav_labels(&agentic_btn_clone, new_state);
+        hide_nav_labels(&notebook_btn_clone, new_state);
+        hide_footer_labels(&theme_btn_clone_anim, new_state);
+        hide_footer_labels(&settings_btn_clone, new_state);
+
+        let sidebar_anim = sidebar_clone.clone();
+        let header_anim = header_clone.clone();
+        let counter_clone = counter.clone();
+        let steps = 20;
+        let step_ms = 10;
+
+        *counter_clone.borrow_mut() = 0;
+
+        glib::timeout_add_local(std::time::Duration::from_millis(step_ms), move || {
+            let mut count = counter_clone.borrow_mut();
+            *count += 1;
+
+            let progress = *count as f64 / steps as f64;
+            let current_width = start_width as f64 + (end_width as f64 - start_width as f64) * progress;
+            let current_margin = start_margin as f64 + (end_margin as f64 - start_margin as f64) * progress;
+
+            sidebar_anim.set_width_request(current_width as i32);
+            header_anim.set_margin_start(current_margin as i32);
+            header_anim.set_margin_end(current_margin as i32);
+
+            if *count >= steps {
+                sidebar_anim.set_width_request(end_width);
+                header_anim.set_margin_start(end_margin);
+                header_anim.set_margin_end(end_margin);
+                return glib::ControlFlow::Break;
+            }
+            glib::ControlFlow::Continue
+        });
     });
 
     sidebar
 }
 
-fn nav_item_button(label_text: &str, badge: Option<&str>) -> Button {
+fn nav_item_button_with_icon(label_text: &str, icon: &str, badge: Option<&str>) -> Button {
     let btn = Button::new();
     btn.add_css_class("nav-item");
 
-    let content = GtkBox::new(Orientation::Horizontal, 0);
+    let content = GtkBox::new(Orientation::Horizontal, 8);
+    let icon_label = Label::new(Some(icon));
+    icon_label.add_css_class("nav-icon");
+    content.append(&icon_label);
+
     let label = Label::new(Some(label_text));
     label.set_halign(Align::Start);
     label.set_hexpand(true);
@@ -149,6 +210,72 @@ fn nav_item_button(label_text: &str, badge: Option<&str>) -> Button {
         badge_label.add_css_class("badge-web");
         content.append(&badge_label);
     }
+
+    btn.set_child(Some(&content));
+    btn
+}
+
+fn hide_nav_labels(btn: &Button, collapsed: bool) {
+    if let Some(child) = btn.child() {
+        if let Some(content) = child.downcast_ref::<GtkBox>() {
+            let mut current = content.first_child();
+            let mut index = 0;
+            while let Some(widget) = current {
+                if index == 0 {
+                    widget.set_visible(true);
+                } else {
+                    widget.set_visible(!collapsed);
+                }
+                current = widget.next_sibling();
+                index += 1;
+            }
+        }
+    }
+    if collapsed {
+        btn.set_halign(Align::Center);
+        btn.set_width_request(44);
+    } else {
+        btn.set_halign(Align::Fill);
+        btn.set_width_request(-1);
+    }
+}
+
+fn hide_footer_labels(btn: &Button, collapsed: bool) {
+    if let Some(child) = btn.child() {
+        if let Some(content) = child.downcast_ref::<GtkBox>() {
+            let mut current = content.first_child();
+            let mut index = 0;
+            while let Some(widget) = current {
+                if index == 0 {
+                    widget.set_visible(true);
+                } else {
+                    widget.set_visible(!collapsed);
+                }
+                current = widget.next_sibling();
+                index += 1;
+            }
+        }
+    }
+    if collapsed {
+        btn.set_halign(Align::Center);
+        btn.set_width_request(44);
+    } else {
+        btn.set_halign(Align::Fill);
+        btn.set_width_request(-1);
+    }
+}
+
+fn footer_button_with_icon(icon: &str, label_text: &str) -> Button {
+    let btn = Button::new();
+    btn.add_css_class("footer-btn");
+
+    let content = GtkBox::new(Orientation::Horizontal, 8);
+    let icon_label = Label::new(Some(icon));
+    icon_label.add_css_class("footer-icon");
+    content.append(&icon_label);
+
+    let label = Label::new(Some(label_text));
+    content.append(&label);
 
     btn.set_child(Some(&content));
     btn
