@@ -4,10 +4,14 @@ mod sandbox;
 mod executor;
 mod commands;
 mod ui;
+mod user_commands;
+mod storage;
+mod chat_store;
+mod crypto;
+mod logger;
 
-use gtk4::prelude::*;
-use gtk4::{Application, CssProvider};
-use gtk4::gdk::Display;
+use gtk::prelude::*;
+use gtk::{Application, CssProvider};
 
 fn main() {
     let app = Application::builder()
@@ -22,11 +26,11 @@ fn main() {
 
 fn load_css() {
     let provider = CssProvider::new();
-    provider.load_from_data(include_str!("ui/style.css"));
-
-    gtk4::style_context_add_provider_for_display(
-        &Display::default().expect("Could not connect to a display."),
+    provider.load_from_data(include_str!("ui/style.css").as_bytes()).ok();
+    
+    gtk::StyleContext::add_provider_for_screen(
+        &gdk::Screen::default().expect("Could not connect to display"),
         &provider,
-        gtk4::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
     );
 }

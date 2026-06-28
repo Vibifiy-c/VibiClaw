@@ -16,44 +16,28 @@ impl CommandRegistry {
     pub fn new() -> Self {
         let mut commands = HashMap::new();
         commands.insert("see".to_string(), CommandInfo {
-            name: "/see",
-            description: "View a file from linked codebase",
-            usage: "/see <filename>",
+            name: "/see", description: "View a file from linked codebase", usage: "/see <filename>",
         });
         commands.insert("create".to_string(), CommandInfo {
-            name: "/create",
-            description: "Create a new file",
-            usage: "/create <path>",
+            name: "/create", description: "Create a new file", usage: "/create <path>",
         });
         commands.insert("edit".to_string(), CommandInfo {
-            name: "/edit",
-            description: "Edit an existing file",
-            usage: "/edit <path>",
+            name: "/edit", description: "Edit an existing file", usage: "/edit <path>",
         });
         commands.insert("delete".to_string(), CommandInfo {
-            name: "/delete",
-            description: "Delete a file",
-            usage: "/delete <path>",
+            name: "/delete", description: "Delete a file", usage: "/delete <path>",
         });
         commands.insert("run".to_string(), CommandInfo {
-            name: "/run",
-            description: "Run a shell command in sandbox",
-            usage: "/run <command>",
+            name: "/run", description: "Run a shell command in sandbox", usage: "/run <command>",
         });
         commands.insert("install".to_string(), CommandInfo {
-            name: "/install",
-            description: "Install a dependency",
-            usage: "/install <package>",
+            name: "/install", description: "Install a dependency", usage: "/install <package>",
         });
         commands.insert("projects".to_string(), CommandInfo {
-            name: "/projects",
-            description: "List linked projects",
-            usage: "/projects",
+            name: "/projects", description: "List linked projects", usage: "/projects",
         });
         commands.insert("help".to_string(), CommandInfo {
-            name: "/help",
-            description: "Show all available commands",
-            usage: "/help",
+            name: "/help", description: "Show all available commands", usage: "/help",
         });
         CommandRegistry { commands }
     }
@@ -78,7 +62,9 @@ impl CommandSuggestionPopover {
         let container = GtkBox::new(Orientation::Vertical, 0);
         container.style_context().add_class("command-popover");
         container.set_visible(false);
+        container.hide();
         container.set_margin_bottom(4);
+        container.set_no_show_all(true);
 
         let list_box = GtkBox::new(Orientation::Vertical, 2);
         list_box.style_context().add_class("command-list");

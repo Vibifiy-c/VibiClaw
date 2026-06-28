@@ -1,432 +1,212 @@
-/* Light theme (default) */
-.light window {
-  background-color: #faf9ff;
-}
-
-.light .sidebar {
-  background-color: #ede0f5;
-}
-
-.light .main-area {
-  background-color: #faf9ff;
-}
-
-.light .nav-item {
-  color: #6b6580;
-}
-.light .nav-item:hover {
-  background-color: #f2e8f7;
-}
-.light .nav-item.active {
-  background-color: #f2e8f7;
-  color: #8B00FF;
-}
-
-.light .sidebar-label {
-  color: #a09bb8;
-}
-
-.light .footer-btn {
-  color: #6b6580;
-  border: 1px solid #ddc8eb;
-}
-.light .footer-btn:hover {
-  background-color: #f2e8f7;
-  color: #1a1523;
-}
-
-.light .badge-web {
-  background-color: #8B00FF;
-}
-
-.light label.title {
-  color: #1a1523;
-}
-
-.light .welcome-title {
-  color: #1a1523;
-}
-
-.light .welcome-subtitle {
-  color: #6b6580;
-}
-
-.light .input-box {
-  background-color: #ffffff;
-  border: 1px solid #ddc8eb;
-}
-
-.light .chat-entry {
-  color: #1a1523;
-}
-
-.light .input-hint {
-  color: #a09bb8;
-}
-
-.light .user-bubble {
-  background-color: #8B00FF;
-}
+* { border: none; outline: none; box-shadow: none; }
+button { border: none; outline: none; box-shadow: none; background-image: none; }
+entry { border: none; outline: none; box-shadow: none; }
+/* Light theme */
+.light window { background-color: #faf9ff; }
+.light .sidebar { background-color: #ede0f5; }
+.light .main-area { background-color: #faf9ff; }
+.light .nav-item { color: #6b6580; }
+.light .nav-item:hover { background-color: #f2e8f7; }
+.light .nav-item.active { background-color: #f2e8f7; color: #8B00FF; }
+.light .sidebar-label { color: #a09bb8; }
+.light .footer-btn { color: #6b6580; border: 1px solid #ddc8eb; }
+.light .footer-btn:hover { background-color: #f2e8f7; color: #1a1523; }
+.light .badge-web { background-color: #8B00FF; }
+.light label.title { color: #1a1523; }
+.light .welcome-title { color: #1a1523; }
+.light .welcome-subtitle { color: #6b6580; }
+.light .input-box { background-color: #ffffff; border: 1px solid #ddc8eb; }
+.light .chat-entry { color: #1a1523; }
+.light .input-hint { color: #a09bb8; }
+.light .user-bubble { background-color: #8B00FF; }
+.light .artifact-card { background-color: #ffffff; border: 1px solid #ddc8eb; }
+.light .artifact-filename { color: #1a1523; }
+.light .artifact-hint { color: #a09bb8; }
+.light .chat-item:hover { background-color: #f2e8f7; }
+.light .chat-item-label { color: #6b6580; }
+.light .pill-label { color: #1a1523; }
+.light .pill-remove { color: #a09bb8; }
+.light .pill-remove:hover { color: #8B00FF; }
+.light .preview-panel { background-color: #ffffff; }
+.light .preview-title { color: #6b6580; }
+.light .preview-close:hover { color: #8B00FF; }
+.light .preview-divider { background-color: #ddc8eb; }
+.light .preview-filename { color: #1a1523; }
+.light .preview-text { color: #6b6580; }
+.light .topbar-title { color: #1a1523; }
+.light .topbar-divider { background-color: #ddc8eb; }
+.light .agentic-heading { color: #1a1523; }
+.light .agentic-section-title { color: #a09bb8; }
+.light .agentic-card { background-color: #ffffff; border: 1px solid #ddc8eb; }
+.light .agentic-card:hover { border-color: #8B00FF; }
+.light .agentic-card-icon { background-color: #f2e8f7; }
+.light .agentic-card-title { color: #1a1523; }
+.light .agentic-card-desc { color: #6b6580; }
+.light .agentic-input { background: #ffffff; border: 1px solid #ddc8eb; color: #1a1523; }
+.light .agentic-or { color: #a09bb8; }
+.light .agentic-upload-btn { background: #ffffff; border: 1px solid #ddc8eb; color: #6b6580; }
+.light .agentic-file-status { color: #8B00FF; }
+.light .agentic-project-row { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .agentic-project-name { color: #1a1523; }
+.light .agentic-project-meta { color: #a09bb8; }
+.light .command-popover { background-color: #ffffff; border: 1px solid #ddc8eb; }
+.light .command-item:hover { background-color: #f2e8f7; }
+.light .command-desc { color: #6b6580; }
+.light .chat-action-btn { color: #a09bb8; }
+.light .chat-action-btn:hover { background: #f2e8f7; }
+.light .share-link { color: #8B00FF; background: #f2e8f7; }
+.light .html-dialog { background: #ffffff; border: 1px solid #e0d8f0; }
+.light .dialog-title { color: #1a1523; }
+.light .dialog-body-text { color: #6b6580; }
+.light .dialog-btn-secondary { color: #6b6580; border: 1px solid #ddc8eb; }
+.light .dialog-btn-secondary:hover { background: #f2e8f7; color: #1a1523; }
+.light .log-session-card { background: #ffffff; border-color: #ddc8eb; }
+.light .log-card-title { color: #1a1523; }
+.light .log-card-subtitle { color: #a09bb8; }
+.light .log-file-line { color: #6b6580; }
+.light .log-timestamp { color: #a09bb8; }
+.light .log-category { color: #6b6580; }
+.light .log-message { color: #1a1523; }
+.light .log-back-btn { border-color: #ddc8eb; color: #6b6580; }
+.light .log-back-btn:hover { background: #f2e8f7; color: #8B00FF; }
+.light .save-screen { background: #faf9ff; }
+.light .save-title { color: #1a1523; }
+.light .save-subtitle { color: #6b6580; }
+.light .browser-toolbar { background: #f5f3ff; }
+.light .browser-nav-btn { color: #6b6580; }
+.light .browser-nav-btn:hover { background: #e8e0f0; }
+.light .browser-url-bar { background: #ffffff; border-color: #ddc8eb; color: #1a1523; }
+.light .browser-title { color: #1a1523; }
+.light .settings-section-title { color: #a09bb8; }
+.light .settings-card { background: #ffffff; border-color: #ddc8eb; }
+.light .settings-row-title { color: #1a1523; }
+.light .settings-row-desc { color: #6b6580; }
 
 /* Dark theme */
-window {
-  background-color: #141414;
-}
-
-.light .artifact-card {
-  background-color: #ffffff;
-  border: 1px solid #ddc8eb;
-}
-
-.light .artifact-filename {
-  color: #1a1523;
-}
-
-.light .artifact-hint {
-  color: #a09bb8;
-}
-
-.sidebar {
-  background-color: #171717;
-}
-
-.main-area {
-  background-color: #141414;
-}
-
-.logo-icon {
-  background-color: #a020f0;
-  border-radius: 8px;
-}
-
-.logo-text-vibi {
-  color: #f0eeff;
-  font-size: 16px;
-}
-
-.logo-text-ai {
-  color: #a020f0;
-  font-size: 16px;
-  font-weight: bold;
-}
-
-.new-chat-btn {
-  background-color: #a020f0;
-  background-image: none;
-  border: none;
-  box-shadow: none;
-  color: white;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-weight: 500;
-}
-.new-chat-btn:hover {
-  background-color: #8e1cd9;
-}
-
-.nav-item {
-  background-color: transparent;
-  background-image: none;
-  border: none;
-  box-shadow: none;
-  color: #9d94c4;
-  border-radius: 7px;
-  padding: 10px 12px;
-  font-size: 13px;
-}
-.nav-item:hover {
-  background-color: #3d2b45;
-}
-.nav-item.active {
-  background-color: #3d2b45;
-  color: #a020f0;
-  font-weight: 500;
-}
-
-.nav-icon {
-  font-size: 16px;
-}
-
-.footer-icon {
-  font-size: 16px;
-}
-
-.sidebar-label {
-  color: #5c5480;
-  font-size: 10px;
-  letter-spacing: 0.8px;
-}
-
-.footer-btn {
-  background-color: transparent;
-  background-image: none;
-  color: #9d94c4;
-  border: 1px solid #3f3f3f;
-  box-shadow: none;
-  border-radius: 7px;
-  padding: 8px 10px;
-  font-size: 13px;
-}
-.footer-btn:hover {
-  background-color: #3d2b45;
-  color: #f0eeff;
-}
-
-.badge-web {
-  background-color: #a020f0;
-  color: white;
-  border-radius: 10px;
-  padding: 1px 6px;
-  font-size: 9px;
-}
-
-label.title {
-  color: #f0eeff;
-  font-size: 20px;
-  font-weight: 500;
-}
-
-.welcome-icon {
-  background-color: #a020f0;
-  border-radius: 14px;
-}
-
-.welcome-title {
-  color: #f0eeff;
-  font-size: 22px;
-  font-weight: 500;
-}
-
-.welcome-subtitle {
-  color: #9d94c4;
-  font-size: 14px;
-}
-
-.input-box {
-  background-color: #2f2f2f;
-  border: 1px solid #3f3f3f;
-  border-radius: 24px;
-  padding: 8px 12px;
-}
-.input-box:focus-within {
-  border-color: #a020f0;
-  box-shadow: 0 0 12px rgba(160, 32, 240, 0.4), 0 0 24px rgba(160, 32, 240, 0.15);
-}
-
-.light .input-box:focus-within {
-  border-color: #8B00FF;
-  box-shadow: 0 0 12px rgba(139, 0, 255, 0.25), 0 0 24px rgba(139, 0, 255, 0.1);
-}
-
-.pill-container {
-  flex-wrap: wrap;
-}
-
-.attachment-pill {
-  background-color: #3d2b45;
-  border: 1px solid #a020f0;
-  border-radius: 16px;
-  padding: 4px 10px;
-}
-
-.light .attachment-pill {
-  background-color: #f2e8f7;
-  border: 1px solid #8B00FF;
-}
-
-.attach-btn {
-  background-color: transparent;
-  background-image: none;
-  border: none;
-  box-shadow: none;
-  color: #5c5480;
-  font-size: 16px;
-  min-width: 34px;
-  min-height: 34px;
-  border-radius: 999px;
-}
-.attach-btn:hover {
-  background-color: #3d2b45;
-  color: #a020f0;
-}
-
-.chat-entry {
-  background-color: transparent;
-  background-image: none;
-  border: none;
-  box-shadow: none;
-  color: #f0eeff;
-  font-size: 14px;
-}
-
-.send-btn {
-  background-color: #a020f0;
-  background-image: none;
-  border: none;
-  box-shadow: none;
-  color: white;
-  min-width: 36px;
-  min-height: 36px;
-  border-radius: 999px;
-}
-.send-btn:hover {
-  background-color: #8e1cd9;
-}
-
-.topbar {
-  background-color: transparent;
-}
-
-.topbar-title {
-  color: #f0eeff;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.light .topbar-title {
-  color: #1a1523;
-}
-
-.topbar-divider {
-  background-color: #3f3f3f;
-  margin: 0 24px;
-}
-
-.light .topbar-divider {
-  background-color: #ddc8eb;
-}
-
-.input-hint {
-  color: #5c5480;
-  font-size: 11px;
-}
-
-.user-bubble {
-  background-color: #a020f0;
-  color: white;
-  border-radius: 12px;
-  padding: 8px 14px;
-  font-size: 14px;
-}
-
-.artifact-card {
-  background-color: #2f2f2f;
-  border: 1px solid #3f3f3f;
-  border-radius: 12px;
-  padding: 12px 16px;
-}
-
-.artifact-icon {
-  font-size: 20px;
-}
-
-.artifact-filename {
-  color: #f0eeff;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.artifact-hint {
-  color: #5c5480;
-  font-size: 11px;
-}
-
-.pill-label {
-  color: #f0eeff;
-  font-size: 13px;
-}
-
-.light .pill-label {
-  color: #1a1523;
-}
-
-.pill-remove {
-  background: transparent;
-  border: none;
-  color: #5c5480;
-  font-size: 14px;
-  padding: 0 4px;
-}
-.pill-remove:hover {
-  color: #a020f0;
-}
-
-.light .pill-remove {
-  color: #a09bb8;
-}
-.light .pill-remove:hover {
-  color: #8B00FF;
-}
-
-.preview-panel {
-  background-color: #1e1e1e;
-  border-left: 1px solid #3f3f3f;
-}
-
-.light .preview-panel {
-  background-color: #ffffff;
-  border-left: 1px solid #ddc8eb;
-}
-
-.preview-header {
-  background-color: transparent;
-}
-
-.preview-title {
-  color: #9d94c4;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.light .preview-title {
-  color: #6b6580;
-}
-
-.preview-close {
-  background: transparent;
-  border: none;
-  color: #5c5480;
-  font-size: 14px;
-  padding: 4px 8px;
-}
-.preview-close:hover {
-  color: #a020f0;
-}
-
-.light .preview-close:hover {
-  color: #8B00FF;
-}
-
-.preview-divider {
-  background-color: #3f3f3f;
-}
-
-.light .preview-divider {
-  background-color: #ddc8eb;
-}
-
-.preview-filename {
-  color: #f0eeff;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.light .preview-filename {
-  color: #1a1523;
-}
-
-.preview-text {
-  color: #9d94c4;
-  font-size: 12px;
-  font-family: monospace;
-}
-
-.light .preview-text {
-  color: #6b6580;
-}
-
-/* Right preview sidebar */
-.preview-panel {
-  min-width: 340px;
-  border-left: 1px solid #3f3f3f;
-}
+window { background-color: #141414; }
+.sidebar { background-color: #171717; }
+.main-area { background-color: #141414; }
+.logo-icon { background-color: #a020f0; border-radius: 8px; }
+.logo-text-vibi { color: #f0eeff; font-size: 16px; }
+.logo-text-ai { color: #a020f0; font-size: 16px; font-weight: bold; }
+.new-chat-btn { background-color: #a020f0; color: white; border-radius: 8px; padding: 8px 12px; font-weight: 500; }
+.new-chat-btn:hover { background-color: #8e1cd9; }
+.nav-item { background-color: transparent; color: #9d94c4; border-radius: 7px; padding: 10px 12px; font-size: 13px; }
+.nav-item:hover { background-color: #3d2b45; }
+.nav-item.active { background-color: #3d2b45; color: #a020f0; font-weight: 500; }
+.nav-icon { font-size: 16px; }
+.footer-icon { font-size: 16px; }
+.sidebar-label { color: #5c5480; font-size: 10px; }
+.chat-item { background: transparent; border-radius: 7px; padding: 6px 10px; }
+.chat-item:hover { background-color: #3d2b45; }
+.chat-item-label { color: #9d94c4; font-size: 13px; }
+.footer-btn { background-color: transparent; color: #9d94c4; border: 1px solid #3f3f3f; border-radius: 7px; padding: 8px 10px; font-size: 13px; }
+.footer-btn:hover { background-color: #3d2b45; color: #f0eeff; }
+.badge-web { background-color: #a020f0; color: white; border-radius: 10px; padding: 1px 6px; font-size: 9px; }
+label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
+.welcome-icon { background-color: #a020f0; border-radius: 14px; }
+.welcome-title { color: #f0eeff; font-size: 22px; font-weight: 500; }
+.welcome-subtitle { color: #9d94c4; font-size: 14px; }
+.input-box { background-color: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 24px; padding: 8px 12px; }
+.attachment-pill { background-color: #3d2b45; border: 1px solid #a020f0; border-radius: 16px; padding: 4px 10px; }
+.attach-btn { background-color: transparent; color: #5c5480; font-size: 16px; border-radius: 999px; }
+.attach-btn:hover { background-color: #3d2b45; color: #a020f0; }
+.chat-entry { background-color: transparent; color: #f0eeff; font-size: 14px; }
+.send-btn { background-color: #a020f0; color: white; border-radius: 999px; }
+.send-btn:hover { background-color: #8e1cd9; }
+.topbar { background-color: transparent; }
+.topbar-title { color: #f0eeff; font-size: 14px; font-weight: 500; }
+.topbar-divider { background-color: #3f3f3f; margin: 0 24px; }
+.input-hint { color: #5c5480; font-size: 11px; }
+.user-bubble { background-color: #a020f0; color: white; border-radius: 12px; padding: 8px 14px; font-size: 14px; }
+.artifact-card { background-color: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; padding: 12px 16px; }
+.artifact-icon { font-size: 20px; }
+.artifact-filename { color: #f0eeff; font-size: 13px; font-weight: 500; }
+.artifact-hint { color: #5c5480; font-size: 11px; }
+.pill-label { color: #f0eeff; font-size: 13px; }
+.pill-remove { background: transparent; color: #5c5480; font-size: 14px; padding: 0 4px; }
+.pill-remove:hover { color: #a020f0; }
+.preview-panel { background-color: #1e1e1e; }
+.preview-header { background-color: transparent; }
+.preview-title { color: #9d94c4; font-size: 12px; font-weight: 500; }
+.preview-close { background: transparent; color: #5c5480; font-size: 14px; padding: 4px 8px; }
+.preview-close:hover { color: #a020f0; }
+.preview-divider { background-color: #3f3f3f; }
+.preview-filename { color: #f0eeff; font-size: 14px; font-weight: 500; }
+.preview-text { color: #9d94c4; font-size: 12px; font-family: monospace; }
+.agentic-heading { color: #f0eeff; font-size: 18px; font-weight: 500; }
+.agentic-section-title { color: #5c5480; font-size: 10px; font-weight: 500; }
+.agentic-card { background-color: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; padding: 16px; }
+.agentic-card:hover { border-color: #a020f0; }
+.agentic-card-icon { background-color: #3d2b45; border-radius: 10px; }
+.agentic-card-icon-text { font-size: 20px; }
+.agentic-card-title { color: #f0eeff; font-size: 14px; font-weight: 500; }
+.agentic-card-desc { color: #9d94c4; font-size: 12px; }
+.agentic-back-btn { background: transparent; border: 1px solid #3f3f3f; color: #9d94c4; border-radius: 8px; padding: 6px 14px; font-size: 13px; }
+.agentic-back-btn:hover { background: #3d2b45; color: #a020f0; }
+.agentic-input { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 8px; padding: 10px 14px; color: #f0eeff; font-size: 14px; }
+.agentic-or { color: #5c5480; font-size: 12px; }
+.agentic-upload-btn { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 8px; padding: 12px 20px; color: #9d94c4; font-size: 14px; }
+.agentic-upload-btn:hover { background: #3d2b45; border-color: #a020f0; color: #f0eeff; }
+.agentic-file-status { color: #a020f0; font-size: 13px; }
+.agentic-create-btn { background: #a020f0; color: white; border: none; border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 500; }
+.agentic-create-btn:hover { background: #8e1cd9; }
+.agentic-project-row { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 8px; padding: 10px 14px; }
+.agentic-project-icon { font-size: 22px; }
+.agentic-project-name { color: #f0eeff; font-size: 14px; font-weight: 500; }
+.agentic-project-meta { color: #5c5480; font-size: 11px; }
+.command-popover { background-color: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; padding: 8px; }
+.command-item { padding: 8px 12px; border-radius: 6px; }
+.command-item:hover { background-color: #3d2b45; }
+.command-name { color: #a020f0; font-size: 13px; font-weight: 500; font-family: monospace; }
+.command-desc { color: #9d94c4; font-size: 12px; }
+.chat-row { padding: 0; }
+.chat-action-btn { background: transparent; color: #5c5480; font-size: 13px; padding: 4px 6px; border-radius: 6px; }
+.chat-action-btn:hover { background: #3d2b45; }
+.share-link { color: #a020f0; font-size: 12px; font-family: monospace; background: #3d2b45; padding: 8px 12px; border-radius: 8px; }
+.html-dialog { background: #1e1e1e; border: 1px solid #3f3f3f; border-radius: 16px; }
+.dialog-title { color: #f0eeff; font-size: 16px; font-weight: 600; }
+.dialog-input { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 10px; padding: 10px 14px; color: #f0eeff; font-size: 14px; }
+.dialog-body-text { color: #9d94c4; font-size: 13px; }
+.dialog-btn-primary { background: #a020f0; color: white; border: none; border-radius: 10px; padding: 8px 20px; font-size: 13px; }
+.dialog-btn-primary:hover { background: #8e1cd9; }
+.dialog-btn-secondary { background: transparent; color: #9d94c4; border: 1px solid #3f3f3f; border-radius: 10px; padding: 8px 20px; font-size: 13px; }
+.dialog-btn-secondary:hover { background: #3d2b45; color: #f0eeff; }
+.dialog-btn-danger { background: #e53935; color: white; border: none; border-radius: 10px; padding: 8px 20px; font-size: 13px; }
+.dialog-btn-danger:hover { background: #c62828; }
+.log-row { padding: 2px 0; }
+.log-timestamp { color: #5c5480; font-size: 11px; font-family: monospace; }
+.log-category { color: #9d94c4; font-size: 11px; font-family: monospace; }
+.log-message { color: #f0eeff; font-size: 11px; font-family: monospace; }
+.log-info { color: #9d94c4; }
+.log-success { color: #4caf50; }
+.log-warning { color: #ff9800; }
+.log-error { color: #e53935; }
+.log-debug { color: #5c5480; }
+.log-session-card { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; padding: 14px 16px; }
+.log-card-title { color: #f0eeff; font-size: 14px; font-weight: 500; }
+.log-card-icon { font-size: 18px; }
+.log-card-subtitle { color: #5c5480; font-size: 11px; }
+.log-file-line { color: #9d94c4; font-size: 11px; font-family: monospace; }
+.log-back-btn { background: transparent; border: 1px solid #3f3f3f; color: #9d94c4; border-radius: 8px; padding: 4px 12px; font-size: 12px; }
+.log-back-btn:hover { background: #3d2b45; color: #a020f0; }
+.log-tampered-banner { color: #e53935; font-size: 13px; font-weight: 500; padding: 12px 16px; background: rgba(229, 57, 53, 0.1); border: 1px solid #e53935; border-radius: 8px; margin: 8px 0; }
+.log-delete-btn { background: transparent; border: none; font-size: 14px; padding: 4px; border-radius: 6px; }
+.log-delete-btn:hover { background: rgba(229, 57, 53, 0.15); }
+.save-screen { background: #141414; }
+.save-icon { font-size: 48px; }
+.save-title { color: #f0eeff; font-size: 20px; font-weight: 600; }
+.save-subtitle { color: #9d94c4; font-size: 14px; }
+.browser-toolbar { background: #1e1e1e; padding: 6px; }
+.browser-nav-btn { background: transparent; border: none; color: #9d94c4; font-size: 16px; padding: 4px 10px; border-radius: 6px; }
+.browser-nav-btn:hover { background: #3d2b45; }
+.browser-url-bar { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 20px; padding: 8px 16px; color: #f0eeff; font-size: 13px; }
+.browser-go-btn { background: #a020f0; color: white; border: none; border-radius: 20px; padding: 8px 16px; font-size: 13px; font-weight: 500; }
+.browser-go-btn:hover { background: #8e1cd9; }
+.browser-title { color: #f0eeff; font-size: 12px; padding: 2px 8px; }
+.settings-section-title { color: #5c5480; font-size: 10px; font-weight: 500; }
+.settings-card { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; }
+.settings-row-title { color: #f0eeff; font-size: 14px; }
+.settings-row-desc { color: #9d94c4; font-size: 12px; }
+.settings-btn-danger { background: transparent; color: #e53935; border: 1px solid #e53935; border-radius: 8px; padding: 8px 16px; font-size: 13px; margin: 8px 16px; }
+.settings-btn-danger:hover { background: rgba(229, 57, 53, 0.1); }

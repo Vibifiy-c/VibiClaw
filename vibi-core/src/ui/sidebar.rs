@@ -1,15 +1,16 @@
-use gtk4::prelude::*;
-use gtk4::{Box as GtkBox, Button, Label, Orientation, Separator, Align};
-use gtk4::glib;
+use gtk::prelude::*;
+use glib::ControlFlow;
+use gtk::{Box as GtkBox, Button, Label, Orientation, Separator, Align};
+use gtk::glib;
+use pango;
 use std::rc::Rc;
 use std::cell::{Cell, RefCell};
 
-pub fn build_sidebar() -> GtkBox {
+pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppStorage>>, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, clear_handle: crate::ui::chat::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) -> (GtkBox, GtkBox, Rc<RefCell<Option<Label>>>) {
     let sidebar = GtkBox::new(Orientation::Vertical, 0);
-sidebar.add_css_class("sidebar");
-sidebar.set_width_request(260);
-sidebar.set_hexpand(false);
-
+    sidebar.style_context().add_class("sidebar");
+    sidebar.set_width_request(260);
+    sidebar.set_hexpand(false);
 
     let header = GtkBox::new(Orientation::Horizontal, 8);
     header.set_margin_top(16);
@@ -18,66 +19,196 @@ sidebar.set_hexpand(false);
     header.set_margin_end(16);
 
     let logo_icon = GtkBox::new(Orientation::Horizontal, 0);
-    logo_icon.add_css_class("logo-icon");
+    logo_icon.style_context().add_class("logo-icon");
     logo_icon.set_size_request(32, 32);
-    header.append(&logo_icon);
+    header.pack_start(&logo_icon, false, false, 0);
 
     let logo_vibi = Label::new(Some("Vibi "));
-    logo_vibi.add_css_class("logo-text-vibi");
-    header.append(&logo_vibi);
+    logo_vibi.style_context().add_class("logo-text-vibi");
+    header.pack_start(&logo_vibi, false, false, 0);
 
     let logo_ai = Label::new(Some("AI"));
-    logo_ai.add_css_class("logo-text-ai");
-    header.append(&logo_ai);
+    logo_ai.style_context().add_class("logo-text-ai");
+    header.pack_start(&logo_ai, false, false, 0);
 
     let header_spacer = GtkBox::new(Orientation::Horizontal, 0);
     header_spacer.set_hexpand(true);
-    header.append(&header_spacer);
+    header.pack_start(&header_spacer, true, true, 0);
 
     let toggle_btn = Button::with_label("☰");
-    toggle_btn.add_css_class("footer-btn");
-    header.append(&toggle_btn);
+    toggle_btn.style_context().add_class("footer-btn");
+    header.pack_start(&toggle_btn, false, false, 0);
 
-    sidebar.append(&header);
-    sidebar.append(&Separator::new(Orientation::Horizontal));
+    sidebar.pack_start(&header, false, false, 0);
+    sidebar.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
 
     let new_chat_btn = Button::with_label("+  New chat");
-    new_chat_btn.add_css_class("new-chat-btn");
+    new_chat_btn.style_context().add_class("new-chat-btn");
     new_chat_btn.set_margin_top(12);
     new_chat_btn.set_margin_bottom(12);
     new_chat_btn.set_margin_start(8);
     new_chat_btn.set_margin_end(8);
-    sidebar.append(&new_chat_btn);
+    sidebar.pack_start(&new_chat_btn, false, false, 0);
 
     let nav_box = GtkBox::new(Orientation::Vertical, 2);
     nav_box.set_margin_start(8);
     nav_box.set_margin_end(8);
 
     let chat_btn = nav_item_button_with_icon("Chat", "💬", None);
-    chat_btn.add_css_class("active");
-    nav_box.append(&chat_btn);
+    chat_btn.style_context().add_class("active");
+    nav_box.pack_start(&chat_btn, false, false, 0);
+
+    let chat_btn_label: Rc<RefCell<Option<Label>>> = Rc::new(RefCell::new(None));
+
+    if let Some(child) = chat_btn.child() {
+        if let Some(content) = child.downcast_ref::<GtkBox>() {
+            for widget in content.children() {
+                let is_icon = widget.style_context().list_classes().iter().any(|c| c.as_str() == "nav-icon");
+                if is_icon { continue; }
+                let is_label = widget.downcast_ref::<Label>();
+                if let Some(label) = is_label {
+                    label.set_ellipsize(pango::EllipsizeMode::End);
+                    label.set_max_width_chars(12);
+                    *chat_btn_label.borrow_mut() = Some(label.clone());
+                    break;
+                }
+            }
+        }
+    }
 
     let agentic_btn = nav_item_button_with_icon("Agentic Tool", "🕵️", None);
-    nav_box.append(&agentic_btn);
+    nav_box.pack_start(&agentic_btn, false, false, 0);
 
     let notebook_btn = nav_item_button_with_icon("AI Notebook", "📓", Some("WEB"));
-    nav_box.append(&notebook_btn);
+    nav_box.pack_start(&notebook_btn, false, false, 0);
 
-    sidebar.append(&nav_box);
-    sidebar.append(&Separator::new(Orientation::Horizontal));
+    let logs_btn = nav_item_button_with_icon("Logs", "📋", None);
+    nav_box.pack_start(&logs_btn, false, false, 0);
+
+    let browser_btn = nav_item_button_with_icon("Browser", "🌐", None);
+    nav_box.pack_start(&browser_btn, false, false, 0);
+
+    let stack_chat = stack.clone();
+    let stack_agentic = stack.clone();
+    let stack_notebook = stack.clone();
+    let chat_btn_1 = chat_btn.clone();
+    let agentic_btn_1 = agentic_btn.clone();
+    let notebook_btn_1 = notebook_btn.clone();
+    let chat_btn_2 = chat_btn.clone();
+    let agentic_btn_2 = agentic_btn.clone();
+    let notebook_btn_2 = notebook_btn.clone();
+    let chat_btn_3 = chat_btn.clone();
+    let agentic_btn_3 = agentic_btn.clone();
+    let notebook_btn_3 = notebook_btn.clone();
+    let logs_btn_1 = logs_btn.clone();
+    let logs_btn_2 = logs_btn.clone();
+    let logs_btn_3 = logs_btn.clone();
+    let browser_btn_1 = browser_btn.clone();
+    let browser_btn_2 = browser_btn.clone();
+    let browser_btn_3 = browser_btn.clone();
+
+    chat_btn.connect_clicked(move |_| {
+        stack_chat.set_visible_child_name("chat");
+        agentic_btn_1.style_context().remove_class("active");
+        notebook_btn_1.style_context().remove_class("active");
+        logs_btn_1.style_context().remove_class("active");
+        browser_btn_1.style_context().remove_class("active");
+        chat_btn_1.style_context().add_class("active");
+    });
+
+    agentic_btn.connect_clicked(move |_| {
+        stack_agentic.set_visible_child_name("agentic");
+        chat_btn_2.style_context().remove_class("active");
+        notebook_btn_2.style_context().remove_class("active");
+        logs_btn_2.style_context().remove_class("active");
+        browser_btn_2.style_context().remove_class("active");
+        agentic_btn_2.style_context().add_class("active");
+    });
+
+    notebook_btn.connect_clicked(move |_| {
+        stack_notebook.set_visible_child_name("chat");
+        agentic_btn_3.style_context().remove_class("active");
+        chat_btn_3.style_context().remove_class("active");
+        logs_btn_3.style_context().remove_class("active");
+        browser_btn_3.style_context().remove_class("active");
+        notebook_btn_3.style_context().add_class("active");
+    });
+
+    let new_chat_stack = stack.clone();
+    let new_chat_agentic_btn = agentic_btn.clone();
+    let new_chat_notebook_btn = notebook_btn.clone();
+    let new_chat_chat_btn = chat_btn.clone();
+    let new_chat_store = chat_store.clone();
+    let new_chat_label = chat_btn_label.borrow().clone();
+    let stack_logs = stack.clone();
+    let logs_btn_4 = logs_btn.clone();
+    let chat_btn_4 = chat_btn.clone();
+    let agentic_btn_4 = agentic_btn.clone();
+    let notebook_btn_4 = notebook_btn.clone();
+    logs_btn.connect_clicked(move |_| {
+        stack_logs.set_visible_child_name("logs");
+        chat_btn_4.style_context().remove_class("active");
+        agentic_btn_4.style_context().remove_class("active");
+        notebook_btn_4.style_context().remove_class("active");
+        logs_btn_4.style_context().add_class("active");
+    });
+
+    let stack_browser = stack.clone();
+    let browser_btn_4 = browser_btn.clone();
+    let chat_btn_5 = chat_btn.clone();
+    let agentic_btn_5 = agentic_btn.clone();
+    let notebook_btn_5 = notebook_btn.clone();
+    let logs_btn_5 = logs_btn.clone();
+    browser_btn.connect_clicked(move |_| {
+        stack_browser.set_visible_child_name("browser");
+        chat_btn_5.style_context().remove_class("active");
+        agentic_btn_5.style_context().remove_class("active");
+        notebook_btn_5.style_context().remove_class("active");
+        logs_btn_5.style_context().remove_class("active");
+        browser_btn_4.style_context().add_class("active");
+    });
+
+    let clear_handle_new = clear_handle.clone();
+    let new_chat_logs_btn = logs_btn.clone();
+    let new_chat_browser_btn = browser_btn.clone();
+    let browser_for_anim = browser_btn.clone();
+    let browser_for_settings = browser_btn.clone();
+    new_chat_btn.connect_clicked(move |_| {
+        new_chat_store.borrow_mut().set_active("");
+        clear_handle_new.clear();
+        new_chat_stack.set_visible_child_name("chat");
+        new_chat_agentic_btn.style_context().remove_class("active");
+        new_chat_notebook_btn.style_context().remove_class("active");
+        new_chat_logs_btn.style_context().remove_class("active");
+        new_chat_browser_btn.style_context().remove_class("active");
+        new_chat_chat_btn.style_context().add_class("active");
+        if let Some(ref lbl) = new_chat_label {
+            lbl.set_text("Chat");
+        }
+    });
+
+    sidebar.pack_start(&nav_box, false, false, 0);
+    sidebar.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
 
     let recent_label = Label::new(Some("RECENT CHATS"));
-    recent_label.add_css_class("sidebar-label");
+    recent_label.style_context().add_class("sidebar-label");
     recent_label.set_halign(Align::Start);
     recent_label.set_margin_start(16);
     recent_label.set_margin_top(12);
-    sidebar.append(&recent_label);
+    sidebar.pack_start(&recent_label, false, false, 0);
+
+    let chat_list_box = GtkBox::new(Orientation::Vertical, 1);
+    chat_list_box.set_margin_start(8);
+    chat_list_box.set_margin_end(8);
+    sidebar.pack_start(&chat_list_box, true, true, 0);
+
+    crate::ui::refresh_sidebar_chat_list(&chat_list_box, &chat_store.borrow(), &stack, chat_store.clone(), clear_handle.clone(), logger.clone());
 
     let spacer = GtkBox::new(Orientation::Vertical, 0);
     spacer.set_vexpand(true);
-    sidebar.append(&spacer);
+    sidebar.pack_start(&spacer, true, true, 0);
 
-    sidebar.append(&Separator::new(Orientation::Horizontal));
+    sidebar.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
 
     let footer = GtkBox::new(Orientation::Vertical, 6);
     footer.set_margin_top(12);
@@ -86,22 +217,25 @@ sidebar.set_hexpand(false);
     footer.set_margin_end(8);
 
     let theme_btn = footer_button_with_icon("☀", "Toggle theme");
-    footer.append(&theme_btn);
+    footer.pack_start(&theme_btn, false, false, 0);
 
+    let storage_theme = storage.clone();
     theme_btn.connect_clicked(move |btn| {
-        let window = btn.root().and_then(|r| r.downcast::<gtk4::ApplicationWindow>().ok());
+        let window = btn.toplevel().and_then(|w| w.downcast::<gtk::ApplicationWindow>().ok());
         if let Some(win) = window {
-            let is_light = !win.css_classes().iter().any(|c| c == "light");
-            if is_light {
-                win.add_css_class("light");
+            let has_light = win.style_context().list_classes().iter().any(|c| c.as_str() == "light");
+            if has_light {
+                win.style_context().remove_class("light");
+                storage_theme.borrow_mut().set_theme("dark");
             } else {
-                win.remove_css_class("light");
+                win.style_context().add_class("light");
+                storage_theme.borrow_mut().set_theme("light");
             }
             if let Some(child) = btn.child() {
                 if let Some(content) = child.downcast_ref::<GtkBox>() {
-                    if let Some(icon) = content.first_child() {
+                    if let Some(icon) = content.children().first() {
                         if let Some(label) = icon.downcast_ref::<Label>() {
-                            label.set_text(if is_light { "☾" } else { "☀" });
+                            label.set_text(if has_light { "☀" } else { "☾" });
                         }
                     }
                 }
@@ -110,9 +244,23 @@ sidebar.set_hexpand(false);
     });
 
     let settings_btn = footer_button_with_icon("⚙", "Settings");
-    footer.append(&settings_btn);
+    footer.pack_start(&settings_btn, false, false, 0);
 
-    sidebar.append(&footer);
+    let settings_stack = stack.clone();
+    let chat_s = chat_btn.clone();
+    let agentic_s = agentic_btn.clone();
+    let notebook_s = notebook_btn.clone();
+    let logs_s = logs_btn.clone();
+    settings_btn.connect_clicked(move |_| {
+        settings_stack.set_visible_child_name("settings");
+        chat_s.style_context().remove_class("active");
+        agentic_s.style_context().remove_class("active");
+        notebook_s.style_context().remove_class("active");
+        logs_s.style_context().remove_class("active");
+        browser_for_settings.style_context().remove_class("active");
+    });
+
+    sidebar.pack_start(&footer, false, false, 0);
 
     let collapsed = Rc::new(Cell::new(false));
 
@@ -124,11 +272,14 @@ sidebar.set_hexpand(false);
     let new_chat_btn_clone = new_chat_btn.clone();
     let nav_box_clone = nav_box.clone();
     let recent_label_clone = recent_label.clone();
+    let chat_list_box_clone = chat_list_box.clone();
     let footer_clone = footer.clone();
     let header_spacer_clone = header_spacer.clone();
     let chat_btn_clone = chat_btn.clone();
     let agentic_btn_clone = agentic_btn.clone();
     let notebook_btn_clone = notebook_btn.clone();
+    let logs_btn_clone = logs_btn.clone();
+    let browser_btn_clone = browser_for_anim.clone();
     let theme_btn_clone_anim = theme_btn.clone();
     let settings_btn_clone = settings_btn.clone();
 
@@ -149,12 +300,15 @@ sidebar.set_hexpand(false);
         new_chat_btn_clone.set_visible(!new_state);
         nav_box_clone.set_visible(!new_state);
         recent_label_clone.set_visible(!new_state);
+        chat_list_box_clone.set_visible(!new_state);
         footer_clone.set_visible(!new_state);
         header_spacer_clone.set_visible(!new_state);
 
         hide_nav_labels(&chat_btn_clone, new_state);
         hide_nav_labels(&agentic_btn_clone, new_state);
         hide_nav_labels(&notebook_btn_clone, new_state);
+        hide_nav_labels(&logs_btn_clone, new_state);
+        hide_nav_labels(&browser_btn_clone, new_state);
         hide_footer_labels(&theme_btn_clone_anim, new_state);
         hide_footer_labels(&settings_btn_clone, new_state);
 
@@ -188,46 +342,45 @@ sidebar.set_hexpand(false);
         });
     });
 
-    sidebar
+    (sidebar, chat_list_box, chat_btn_label)
 }
 
 fn nav_item_button_with_icon(label_text: &str, icon: &str, badge: Option<&str>) -> Button {
     let btn = Button::new();
-    btn.add_css_class("nav-item");
+    btn.style_context().add_class("nav-item");
 
     let content = GtkBox::new(Orientation::Horizontal, 8);
     let icon_label = Label::new(Some(icon));
-    icon_label.add_css_class("nav-icon");
-    content.append(&icon_label);
+    icon_label.style_context().add_class("nav-icon");
+    content.pack_start(&icon_label, false, false, 0);
 
     let label = Label::new(Some(label_text));
     label.set_halign(Align::Start);
     label.set_hexpand(true);
-    content.append(&label);
+    label.set_ellipsize(pango::EllipsizeMode::End);
+    label.set_max_width_chars(12);
+    content.pack_start(&label, true, true, 0);
 
     if let Some(b) = badge {
         let badge_label = Label::new(Some(b));
-        badge_label.add_css_class("badge-web");
-        content.append(&badge_label);
+        badge_label.style_context().add_class("badge-web");
+        content.pack_start(&badge_label, false, false, 0);
     }
 
-    btn.set_child(Some(&content));
+    btn.add(&content);
     btn
 }
 
 fn hide_nav_labels(btn: &Button, collapsed: bool) {
     if let Some(child) = btn.child() {
         if let Some(content) = child.downcast_ref::<GtkBox>() {
-            let mut current = content.first_child();
-            let mut index = 0;
-            while let Some(widget) = current {
-                if index == 0 {
+            let children = content.children();
+            for (i, widget) in children.iter().enumerate() {
+                if i == 0 {
                     widget.set_visible(true);
                 } else {
                     widget.set_visible(!collapsed);
                 }
-                current = widget.next_sibling();
-                index += 1;
             }
         }
     }
@@ -243,16 +396,13 @@ fn hide_nav_labels(btn: &Button, collapsed: bool) {
 fn hide_footer_labels(btn: &Button, collapsed: bool) {
     if let Some(child) = btn.child() {
         if let Some(content) = child.downcast_ref::<GtkBox>() {
-            let mut current = content.first_child();
-            let mut index = 0;
-            while let Some(widget) = current {
-                if index == 0 {
+            let children = content.children();
+            for (i, widget) in children.iter().enumerate() {
+                if i == 0 {
                     widget.set_visible(true);
                 } else {
                     widget.set_visible(!collapsed);
                 }
-                current = widget.next_sibling();
-                index += 1;
             }
         }
     }
@@ -267,16 +417,16 @@ fn hide_footer_labels(btn: &Button, collapsed: bool) {
 
 fn footer_button_with_icon(icon: &str, label_text: &str) -> Button {
     let btn = Button::new();
-    btn.add_css_class("footer-btn");
+    btn.style_context().add_class("footer-btn");
 
     let content = GtkBox::new(Orientation::Horizontal, 8);
     let icon_label = Label::new(Some(icon));
-    icon_label.add_css_class("footer-icon");
-    content.append(&icon_label);
+    icon_label.style_context().add_class("footer-icon");
+    content.pack_start(&icon_label, false, false, 0);
 
     let label = Label::new(Some(label_text));
-    content.append(&label);
+    content.pack_start(&label, false, false, 0);
 
-    btn.set_child(Some(&content));
+    btn.add(&content);
     btn
 }
