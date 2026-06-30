@@ -197,12 +197,20 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     recent_label.set_margin_top(12);
     sidebar.pack_start(&recent_label, false, false, 0);
 
-    let chat_list_box = GtkBox::new(Orientation::Vertical, 1);
-    chat_list_box.set_margin_start(8);
-    chat_list_box.set_margin_end(8);
-    sidebar.pack_start(&chat_list_box, true, true, 0);
+    let chat_scroll = gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+    chat_scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+    chat_scroll.set_vexpand(true);
+    chat_scroll.set_margin_top(10);
+    chat_scroll.set_margin_bottom(10);
 
-    crate::ui::refresh_sidebar_chat_list(&chat_list_box, &chat_store.borrow(), &stack, chat_store.clone(), clear_handle.clone(), logger.clone());
+    let chat_list_box = GtkBox::new(Orientation::Vertical, 1);
+    chat_list_box.set_margin_start(10);
+    chat_list_box.set_margin_end(10);
+    chat_scroll.add(&chat_list_box);
+    sidebar.pack_start(&chat_scroll, true, true, 0);
+
+    let store_ref = chat_store.borrow();
+    crate::ui::refresh_sidebar_chat_list(&chat_list_box, &store_ref, &stack, chat_store.clone(), clear_handle.clone(), logger.clone());
 
     let spacer = GtkBox::new(Orientation::Vertical, 0);
     spacer.set_vexpand(true);

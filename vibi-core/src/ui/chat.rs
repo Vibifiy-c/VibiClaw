@@ -1,5 +1,5 @@
 use gtk::prelude::*;
-use glib::ControlFlow;
+
 use gtk::{Box as GtkBox, Button, Entry, Label, Orientation, Align, ScrolledWindow, PolicyType, Separator};
 use gtk::glib;
 use gtk::FileChooserDialog;
@@ -168,6 +168,7 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
 
     let message_area = GtkBox::new(Orientation::Vertical, 0);
     message_area.set_vexpand(true);
+    message_area.set_valign(Align::Fill);
 
     let welcome = GtkBox::new(Orientation::Vertical, 16);
     welcome.set_valign(Align::Center);
@@ -192,6 +193,7 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     welcome.pack_start(&subtitle, false, false, 0);
 
     message_area.pack_start(&welcome, true, true, 0);
+    let message_area_weak = message_area.clone();
     scroll.add(&message_area);
     root.pack_start(&scroll, true, true, 0);
 
@@ -258,6 +260,9 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     input_area.set_margin_bottom(24);
     input_area.set_margin_top(16);
 
+    let model_selector = crate::ui::model_selector::build_model_selector();
+    input_area.pack_start(&model_selector.container, false, false, 0);
+
     let pill_container = GtkBox::new(Orientation::Horizontal, 4);
     pill_container.style_context().add_class("pill-container");
     pill_container.set_visible(false);
@@ -292,8 +297,6 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     let send_btn = Button::with_label("➤");
     send_btn.style_context().add_class("send-btn");
     input_box.pack_start(&send_btn, false, false, 0);
-    let messages_clone = Rc::new(RefCell::new(message_area.clone()));
-    let welcome_clone = welcome.clone();
 
     attach_btn.connect_clicked({
         let pending = pending_files.clone();
@@ -332,35 +335,71 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     let entry_clone = entry.clone();
     let pending_send = pending_files.clone();
     let scroll_send = scroll.clone();
-    let preview_panel_send = preview_panel.clone();
-    let preview_name_send = preview_name.clone();
-    let preview_text_send = preview_text.clone();
     let pill_container_send = pill_container.clone();
-
-    let messages_clone_send = messages_clone.clone();
-    let welcome_clone_send = welcome_clone.clone();
+    let welcome_widget: Rc<RefCell<Option<GtkBox>>> = Rc::new(RefCell::new(None));
+    let welcome_widget_clear = welcome_widget.clone();
+    let welcome_for_remove = welcome.clone();
     let chat_title_send = chat_title.clone();
     let chat_store_send = chat_store.clone();
+    let ai_bridge: Rc<RefCell<Option<crate::ai_bridge::AiBridge>>> = Rc::new(RefCell::new(None));
+    let ai_bridge_send = ai_bridge.clone();
+    let model_sel = model_selector.selected_model.clone();
+    let root_for_bridge = root.clone();
+    let chat_store_for_response = chat_store.clone();
+    let message_area_for_response = message_area.clone();
 
     send_btn.connect_clicked(move |_| {
-        let msgs = messages_clone_send.clone();
-        let welcome_clone = welcome_clone_send.clone();
         let chat_title = chat_title_send.clone();
         let chat_store = chat_store_send.clone();
         let text = entry_clone.text().to_string();
         let files = pending_send.borrow_mut().drain(..).collect::<Vec<_>>();
         if text.trim().is_empty() && files.is_empty() { return; }
 
-        let children = msgs.borrow().children();
-        if !children.is_empty() {
-            let first = children[0].clone();
-            msgs.borrow_mut().remove(&first);
+        if welcome_widget.borrow().is_none() {
+            message_area.remove(&welcome_for_remove);
+            *welcome_widget.borrow_mut() = Some(welcome_for_remove.clone());
         }
 
         let mut store = chat_store.borrow_mut();
         let is_new = store.get_active().is_none() && !text.trim().is_empty();
         if is_new {
-            store.create_chat(&text);
+            let model = model_sel.borrow().clone();
+            store.create_chat(&text, &model);
+            store.save();
+            
+            let bridge = crate::ai_bridge::AiBridge::new(&model);
+            let message_area_clone = message_area.clone();
+            let chat_store_clone = chat_store_for_response.clone();
+            let logger_clone = logger.clone();
+            bridge.on_response(move |response: String| {
+                let mut store = chat_store_clone.borrow_mut();
+                store.add_message_to_active("assistant", &response);
+                store.save();
+                logger_clone.borrow_mut().log(crate::logger::LogLevel::Info, "AI", &format!("Response: {}", &response[..response.len().min(50)]));
+                
+                let msg_area = message_area_clone.clone();
+                let resp = response.clone();
+                gtk::glib::idle_add_local(move || {
+                    let msg_row = GtkBox::new(Orientation::Horizontal, 0);
+                    msg_row.set_halign(Align::Start);
+                    msg_row.set_margin_top(4);
+                    msg_row.set_margin_bottom(4);
+                    msg_row.set_margin_start(24);
+                    
+                    let bubble = Label::new(Some(&resp));
+                    bubble.set_wrap(true);
+                    bubble.set_max_width_chars(60);
+                    bubble.style_context().add_class("ai-bubble");
+                    msg_row.pack_start(&bubble, true, true, 0);
+                    msg_area.pack_start(&msg_row, false, false, 0);
+                    msg_row.show_all();
+                    gtk::glib::ControlFlow::Break
+                });
+            });
+            root_for_bridge.pack_start(&bridge.webview, false, false, 0);
+            bridge.webview.show_all();
+            *ai_bridge_send.borrow_mut() = Some(bridge);
+            
             logger.borrow_mut().log(crate::logger::LogLevel::Info, "Chat", &format!("New chat created: {}", &text[..text.len().min(30)]));
         }
         if !text.trim().is_empty() {
@@ -380,61 +419,30 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
 
         for f in &files {
             logger.borrow_mut().log(crate::logger::LogLevel::Info, "File", &format!("Attached: {}", f.name));
-            let artifact_row = GtkBox::new(Orientation::Horizontal, 0);
-            artifact_row.set_halign(Align::End);
-            artifact_row.set_margin_top(4);
-            artifact_row.set_margin_end(24);
-
-            let card = GtkBox::new(Orientation::Horizontal, 10);
-            card.style_context().add_class("artifact-card");
-            card.set_halign(Align::End);
-
-            let icon = if f.is_image { "🖼" } else { "📎" };
-            let icon_label = Label::new(Some(icon));
-            icon_label.style_context().add_class("artifact-icon");
-            card.pack_start(&icon_label, false, false, 0);
-
-            let name_label = Label::new(Some(&f.name));
-            name_label.style_context().add_class("artifact-filename");
-            name_label.set_wrap(true);
-            name_label.set_max_width_chars(40);
-            card.pack_start(&name_label, false, false, 0);
-
-            let f_name = f.name.clone();
-            let f_content = if f.is_image { "[Image preview not available]".to_string() } else { String::from_utf8_lossy(&f.content).to_string() };
-            let panel = preview_panel_send.clone();
-            let p_name = preview_name_send.clone();
-            let p_text = preview_text_send.clone();
-            card.connect_button_press_event(move |_, _| {
-                p_name.set_text(&f_name);
-                p_text.set_text(&f_content);
-                animate_preview(&panel, true);
-                false.into()
-            });
-
-            artifact_row.pack_start(&card, true, true, 0);
-            msgs.borrow_mut().pack_start(&artifact_row, false, false, 0);
-            artifact_row.show_all();
         }
 
-        let full_message = if text.is_empty() { String::new() } else { text.clone() };
-
-        if !full_message.is_empty() {
+        if !text.trim().is_empty() {
             let msg_row = GtkBox::new(Orientation::Horizontal, 0);
             msg_row.set_halign(Align::End);
             msg_row.set_margin_top(4);
             msg_row.set_margin_bottom(4);
             msg_row.set_margin_end(24);
 
-            let bubble = Label::new(Some(&full_message));
+            let bubble = Label::new(Some(&text));
             bubble.set_wrap(true);
             bubble.set_max_width_chars(60);
             bubble.style_context().add_class("user-bubble");
             msg_row.pack_start(&bubble, true, true, 0);
-            msgs.borrow_mut().pack_start(&msg_row, false, false, 0);
+            message_area.pack_start(&msg_row, false, false, 0);
             msg_row.show_all();
+            
+            if let Some(ref bridge) = *ai_bridge_send.borrow() {
+                bridge.send_message(&text);
+            } else {
+                println!("[Chat] No AiBridge available, message not sent to AI");
+            }
         }
-        drop(msgs);
+        message_area.show_all();
 
         entry_clone.set_text("");
         pill_container_send.set_visible(false);
@@ -443,7 +451,6 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
             pill_container_send.remove(child);
         }
 
-                message_area.show_all();
         let scroll_clone = scroll_send.clone();
         glib::timeout_add_local(std::time::Duration::from_millis(50), move || {
             let adj = scroll_clone.vadjustment();
@@ -462,7 +469,7 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     root.pack_start(&input_area, false, false, 0);
 
     let clear_handle = ChatClearHandle::new();
-    let messages_clear = messages_clone.clone();
+    let messages_clear = Rc::new(RefCell::new(message_area_weak.clone()));
     let welcome_clear = welcome.clone();
     let quote_subtitle = subtitle.clone();
     let store_for_clear = chat_store.clone();
@@ -490,10 +497,13 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
                 msg_row.pack_start(&bubble, false, false, 0);
                 msgs.pack_start(&msg_row, false, false, 0);
             }
+            msgs.show_all();
         } else {
             quote_subtitle.set_text(random_quote());
             msgs.pack_start(&welcome_clear.clone(), true, true, 0);
             chat_title_for_clear.set_text("Vibi AI");
+            msgs.show_all();
+            *welcome_widget_clear.borrow_mut() = None;
         }
     }));
 

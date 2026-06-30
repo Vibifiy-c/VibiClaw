@@ -5,10 +5,10 @@ pub mod dialog;
 pub mod logs;
 pub mod browser;
 pub mod settings;
+pub mod model_selector;
 
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Orientation, Align, Button, Label, Stack};
-use gtk::glib;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -75,6 +75,7 @@ pub fn refresh_sidebar_chat_list(container: &GtkBox, store: &crate::chat_store::
 
         container.pack_start(&row, false, false, 0);
     }
+    container.show_all();
 }
 
 fn show_rename_dialog(item: &Button) {

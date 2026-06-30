@@ -19,6 +19,7 @@ entry { border: none; outline: none; box-shadow: none; }
 .light .chat-entry { color: #1a1523; }
 .light .input-hint { color: #a09bb8; }
 .light .user-bubble { background-color: #8B00FF; }
+.light .ai-bubble { background-color: #f5f3ff; color: #1a1523; border: 1px solid #ddc8eb; }
 .light .artifact-card { background-color: #ffffff; border: 1px solid #ddc8eb; }
 .light .artifact-filename { color: #1a1523; }
 .light .artifact-hint { color: #a09bb8; }
@@ -81,6 +82,13 @@ entry { border: none; outline: none; box-shadow: none; }
 .light .settings-card { background: #ffffff; border-color: #ddc8eb; }
 .light .settings-row-title { color: #1a1523; }
 .light .settings-row-desc { color: #6b6580; }
+.light .settings-btn-danger:hover { background: rgba(229, 57, 53, 0.1); }
+.light .model-trigger { background: #ffffff; border: 1px solid #ddc8eb; color: #6b6580; }
+.light .model-trigger:hover { background: #f2e8f7; border-color: #8B00FF; }
+.light .model-panel { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .model-row:hover { background: #f2e8f7; }
+.light .model-name { color: #1a1523; }
+.light .model-desc { color: #6b6580; }
 
 /* Dark theme */
 window { background-color: #141414; }
@@ -119,6 +127,7 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 .topbar-divider { background-color: #3f3f3f; margin: 0 24px; }
 .input-hint { color: #5c5480; font-size: 11px; }
 .user-bubble { background-color: #a020f0; color: white; border-radius: 12px; padding: 8px 14px; font-size: 14px; }
+.ai-bubble { background-color: #2f2f2f; color: #f0eeff; border: 1px solid #3f3f3f; border-radius: 12px; padding: 8px 14px; font-size: 14px; }
 .artifact-card { background-color: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; padding: 12px 16px; }
 .artifact-icon { font-size: 20px; }
 .artifact-filename { color: #f0eeff; font-size: 13px; font-weight: 500; }
@@ -210,3 +219,13 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 .settings-row-desc { color: #9d94c4; font-size: 12px; }
 .settings-btn-danger { background: transparent; color: #e53935; border: 1px solid #e53935; border-radius: 8px; padding: 8px 16px; font-size: 13px; margin: 8px 16px; }
 .settings-btn-danger:hover { background: rgba(229, 57, 53, 0.1); }
+.model-trigger { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 10px; padding: 8px 14px; }
+.model-trigger:hover { background: #3d2b45; border-color: #a020f0; }
+.model-trigger-icon { font-size: 16px; }
+.model-trigger-arrow { color: #5c5480; font-size: 12px; }
+.model-panel { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; }
+.model-row { padding: 8px 12px; border-radius: 8px; }
+.model-row:hover { background: #3d2b45; }
+.model-icon { font-size: 20px; }
+.model-name { color: #f0eeff; font-size: 14px; font-weight: 500; }
+.model-desc { color: #5c5480; font-size: 11px; }

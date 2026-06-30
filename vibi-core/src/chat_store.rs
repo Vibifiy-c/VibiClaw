@@ -6,6 +6,7 @@ use std::path::PathBuf;
 pub struct ChatSession {
     pub id: String,
     pub title: String,
+    pub model: String,
     pub messages: Vec<ChatMessage>,
 }
 
@@ -16,11 +17,12 @@ pub struct ChatMessage {
 }
 
 impl ChatSession {
-    pub fn new(id: String, first_message: &str) -> Self {
+    pub fn new(id: String, first_message: &str, model: &str) -> Self {
         let title = generate_title(first_message);
         ChatSession {
             id,
             title,
+            model: model.to_string(),
             messages: Vec::new(),
         }
     }
@@ -65,9 +67,9 @@ impl ChatStore {
         }
     }
 
-    pub fn create_chat(&mut self, first_message: &str) -> &ChatSession {
+    pub fn create_chat(&mut self, first_message: &str, model: &str) -> &ChatSession {
         let id = format!("chat_{}", chrono::Utc::now().timestamp_millis());
-        let chat = ChatSession::new(id.clone(), first_message);
+        let chat = ChatSession::new(id.clone(), first_message, model);
         self.chats.insert(0, chat);
         self.active_id = Some(id.clone());
         self.save();

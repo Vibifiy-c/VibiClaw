@@ -4,6 +4,7 @@ mod sandbox;
 mod executor;
 mod commands;
 mod ui;
+mod ai_bridge;
 mod user_commands;
 mod storage;
 mod chat_store;
