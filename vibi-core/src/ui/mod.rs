@@ -6,6 +6,7 @@ pub mod logs;
 pub mod browser;
 pub mod settings;
 pub mod model_selector;
+pub mod ai_notebook;
 
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Orientation, Align, Button, Label, Stack};
@@ -177,9 +178,12 @@ pub fn build_window(app: &Application) {
         }
     };
 
+    let ai_notebook = ai_notebook::build_ai_notebook();
+    let ai_notebook_webviews = ai_notebook.webviews.clone();
+
     let refresh_chats_cell: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
     let refresh_chats_placeholder = refresh_chats_cell.clone();
-    let (chat_view, preview_panel, clear_handle) = chat::build_chat_view(chat_store.clone(), logger.clone(), Box::new(move || {
+    let (chat_view, preview_panel, clear_handle) = chat::build_chat_view(chat_store.clone(), logger.clone(), ai_notebook_webviews, Box::new(move || {
         if let Some(ref f) = *refresh_chats_placeholder.borrow() { f(); }
     }), Box::new(title_updater), Box::new(reset_chat_title));
 
@@ -200,6 +204,7 @@ pub fn build_window(app: &Application) {
 
     main_stack.add_titled(&chat_view, "chat", "Chat");
     main_stack.add_titled(&agentic_view, "agentic", "Agentic Tool");
+    main_stack.add_titled(&ai_notebook.container, "ai_notebook", "AI Notebook");
     main_stack.add_titled(&logs_view, "logs", "Logs");
     main_stack.add_titled(&browser_view, "browser", "Browser");
     main_stack.add_titled(&settings_view, "settings", "Settings");

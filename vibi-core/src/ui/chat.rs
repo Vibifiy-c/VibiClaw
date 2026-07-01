@@ -8,6 +8,7 @@ use crate::user_commands::{CommandRegistry, CommandSuggestionPopover};
 use crate::chat_store::ChatStore;
 use std::rc::Rc;
 use std::cell::RefCell;
+
 use rand::Rng;
 
 const WELCOME_QUOTES: &[&str] = &[
@@ -139,7 +140,7 @@ struct AttachedFile {
     is_image: bool,
 }
 
-pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<crate::logger::Logger>>, on_chat_update: Box<dyn Fn()>, on_title_change: Box<dyn Fn(String)>, on_reset_title: Box<dyn Fn()>) -> (GtkBox, GtkBox, ChatClearHandle) {
+pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<crate::logger::Logger>>, notebook_webviews: Rc<RefCell<std::collections::HashMap<String, webkit2gtk::WebView>>>, on_chat_update: Box<dyn Fn()>, on_title_change: Box<dyn Fn(String)>, on_reset_title: Box<dyn Fn()>) -> (GtkBox, GtkBox, ChatClearHandle) {
     let pending_files: Rc<RefCell<Vec<AttachedFile>>> = Rc::new(RefCell::new(Vec::new()));
     let root = GtkBox::new(Orientation::Vertical, 0);
     root.set_hexpand(true);
@@ -344,9 +345,9 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     let ai_bridge: Rc<RefCell<Option<crate::ai_bridge::AiBridge>>> = Rc::new(RefCell::new(None));
     let ai_bridge_send = ai_bridge.clone();
     let model_sel = model_selector.selected_model.clone();
-    let root_for_bridge = root.clone();
+
     let chat_store_for_response = chat_store.clone();
-    let message_area_for_response = message_area.clone();
+
 
     send_btn.connect_clicked(move |_| {
         let chat_title = chat_title_send.clone();
@@ -367,38 +368,41 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
             store.create_chat(&text, &model);
             store.save();
             
-            let bridge = crate::ai_bridge::AiBridge::new(&model);
-            let message_area_clone = message_area.clone();
-            let chat_store_clone = chat_store_for_response.clone();
-            let logger_clone = logger.clone();
-            bridge.on_response(move |response: String| {
-                let mut store = chat_store_clone.borrow_mut();
-                store.add_message_to_active("assistant", &response);
-                store.save();
-                logger_clone.borrow_mut().log(crate::logger::LogLevel::Info, "AI", &format!("Response: {}", &response[..response.len().min(50)]));
-                
-                let msg_area = message_area_clone.clone();
-                let resp = response.clone();
-                gtk::glib::idle_add_local(move || {
-                    let msg_row = GtkBox::new(Orientation::Horizontal, 0);
-                    msg_row.set_halign(Align::Start);
-                    msg_row.set_margin_top(4);
-                    msg_row.set_margin_bottom(4);
-                    msg_row.set_margin_start(24);
+            let wv = notebook_webviews.borrow().get(&model).cloned();
+            if let Some(webview) = wv {
+                let bridge = crate::ai_bridge::AiBridge::from_webview(webview, &model);
+                let message_area_clone = message_area.clone();
+                let chat_store_clone = chat_store_for_response.clone();
+                let logger_clone = logger.clone();
+                bridge.on_response(move |response: String| {
+                    let mut store = chat_store_clone.borrow_mut();
+                    store.add_message_to_active("assistant", &response);
+                    store.save();
+                    logger_clone.borrow_mut().log(crate::logger::LogLevel::Info, "AI", &format!("Response: {}", &response[..response.len().min(50)]));
                     
-                    let bubble = Label::new(Some(&resp));
-                    bubble.set_wrap(true);
-                    bubble.set_max_width_chars(60);
-                    bubble.style_context().add_class("ai-bubble");
-                    msg_row.pack_start(&bubble, true, true, 0);
-                    msg_area.pack_start(&msg_row, false, false, 0);
-                    msg_row.show_all();
-                    gtk::glib::ControlFlow::Break
+                    let msg_area = message_area_clone.clone();
+                    let resp = response.clone();
+                    gtk::glib::idle_add_local(move || {
+                        let msg_row = GtkBox::new(Orientation::Horizontal, 0);
+                        msg_row.set_halign(Align::Start);
+                        msg_row.set_margin_top(4);
+                        msg_row.set_margin_bottom(4);
+                        msg_row.set_margin_start(24);
+                        
+                        let bubble = Label::new(Some(&resp));
+                        bubble.set_wrap(true);
+                        bubble.set_max_width_chars(60);
+                        bubble.style_context().add_class("ai-bubble");
+                        msg_row.pack_start(&bubble, true, true, 0);
+                        msg_area.pack_start(&msg_row, false, false, 0);
+                        msg_row.show_all();
+                        gtk::glib::ControlFlow::Break
+                    });
                 });
-            });
-            root_for_bridge.pack_start(&bridge.webview, false, false, 0);
-            bridge.webview.show_all();
-            *ai_bridge_send.borrow_mut() = Some(bridge);
+                *ai_bridge_send.borrow_mut() = Some(bridge);
+            } else {
+                logger.borrow_mut().log(crate::logger::LogLevel::Error, "Chat", &format!("No webview found for model: {}", model));
+            }
             
             logger.borrow_mut().log(crate::logger::LogLevel::Info, "Chat", &format!("New chat created: {}", &text[..text.len().min(30)]));
         }

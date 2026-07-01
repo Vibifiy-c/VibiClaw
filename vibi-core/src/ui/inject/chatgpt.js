@@ -2,13 +2,25 @@
     if (window.__vibi_obs) return;
     window.__vibi_obs = true;
     window.__vibi_last = '';
-    setInterval(function() {
+    
+    function findLatestResponse() {
         var msgs = document.querySelectorAll('[data-message-author-role="assistant"]');
-        if (msgs.length > 0) {
-            var last = msgs[msgs.length - 1].textContent.trim();
-            if (last !== window.__vibi_last && last.length > 0) {
-                window.__vibi_last = last;
-            }
+        if (msgs.length > 0) return msgs[msgs.length - 1].textContent.trim();
+        msgs = document.querySelectorAll('.markdown');
+        if (msgs.length > 0) return msgs[msgs.length - 1].textContent.trim();
+        return '';
+    }
+    
+    function toHex(str) {
+        var bytes = new TextEncoder().encode(str);
+        return Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+    }
+    
+    setInterval(function() {
+        var text = findLatestResponse();
+        if (text.length > 0 && text !== window.__vibi_last) {
+            window.__vibi_last = text;
+            window.location.hash = 'vibi-' + toHex(text);
         }
-    }, 1500);
+    }, 2000);
 })();

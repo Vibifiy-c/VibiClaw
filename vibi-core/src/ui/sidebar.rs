@@ -126,7 +126,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     });
 
     notebook_btn.connect_clicked(move |_| {
-        stack_notebook.set_visible_child_name("chat");
+        stack_notebook.set_visible_child_name("ai_notebook");
         agentic_btn_3.style_context().remove_class("active");
         chat_btn_3.style_context().remove_class("active");
         logs_btn_3.style_context().remove_class("active");
