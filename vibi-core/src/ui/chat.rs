@@ -6,9 +6,9 @@ use gtk::FileChooserDialog;
 
 use crate::user_commands::{CommandRegistry, CommandSuggestionPopover};
 use crate::chat_store::ChatStore;
+use crate::ui::ai_notebook::AiNotebook;
 use std::rc::Rc;
 use std::cell::RefCell;
-
 use rand::Rng;
 
 const WELCOME_QUOTES: &[&str] = &[
@@ -140,7 +140,7 @@ struct AttachedFile {
     is_image: bool,
 }
 
-pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<crate::logger::Logger>>, notebook_webviews: Rc<RefCell<std::collections::HashMap<String, webkit2gtk::WebView>>>, on_chat_update: Box<dyn Fn()>, on_title_change: Box<dyn Fn(String)>, on_reset_title: Box<dyn Fn()>) -> (GtkBox, GtkBox, ChatClearHandle) {
+pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<crate::logger::Logger>>, ai_notebook: Rc<RefCell<AiNotebook>>, on_chat_update: Box<dyn Fn()>, on_title_change: Box<dyn Fn(String)>, on_reset_title: Box<dyn Fn()>) -> (GtkBox, GtkBox, ChatClearHandle) {
     let pending_files: Rc<RefCell<Vec<AttachedFile>>> = Rc::new(RefCell::new(Vec::new()));
     let root = GtkBox::new(Orientation::Vertical, 0);
     root.set_hexpand(true);
@@ -261,8 +261,7 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     input_area.set_margin_bottom(24);
     input_area.set_margin_top(16);
 
-    let model_selector = crate::ui::model_selector::build_model_selector();
-    input_area.pack_start(&model_selector.container, false, false, 0);
+
 
     let pill_container = GtkBox::new(Orientation::Horizontal, 4);
     pill_container.style_context().add_class("pill-container");
@@ -288,16 +287,54 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     entry.set_hexpand(true);
     input_box.pack_start(&entry, true, true, 0);
 
+    let model_selector = crate::ui::model_selector::build_model_selector();
+    input_box.pack_start(&model_selector.container, false, false, 0);
+
+    let send_btn = Button::with_label("➤");
+    send_btn.style_context().add_class("send-btn");
+    send_btn.style_context().add_class("send-btn-disabled");
+    send_btn.set_sensitive(false);
+    input_box.pack_start(&send_btn, false, false, 0);
+
+    let entry_focus = entry.clone();
+    let input_box_event = input_box.clone();
+    input_box_event.connect_button_press_event(move |_, _| {
+        entry_focus.grab_focus();
+        false.into()
+    });
+
+    let model_check = model_selector.selected_model.clone();
+    let entry_check = entry.clone();
+    let send_check = send_btn.clone();
+    entry.connect_changed(move |e| {
+        let has_text = !e.text().trim().is_empty();
+        let has_model = !model_check.borrow().is_empty();
+        let ready = has_text && has_model;
+        send_check.set_sensitive(ready);
+        if ready {
+            send_check.style_context().remove_class("send-btn-disabled");
+        } else {
+            send_check.style_context().add_class("send-btn-disabled");
+        }
+    });
+
+    let entry_activate = entry.clone();
+    let model_check2 = model_selector.selected_model.clone();
+    let send_check2 = send_btn.clone();
+    entry.connect_activate(move |e| {
+        let has_text = !e.text().trim().is_empty();
+        let has_model = !model_check2.borrow().is_empty();
+        if has_text && has_model {
+            send_check2.emit_clicked();
+        }
+    });
+
     let registry_clone = command_registry.clone();
     let popover_clone = command_popover.clone();
     entry.connect_changed(move |e| {
         let text = e.text().to_string();
         popover_clone.show_suggestions(&registry_clone, &text, e);
     });
-
-    let send_btn = Button::with_label("➤");
-    send_btn.style_context().add_class("send-btn");
-    input_box.pack_start(&send_btn, false, false, 0);
 
     attach_btn.connect_clicked({
         let pending = pending_files.clone();
@@ -328,10 +365,7 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
         }
     });
 
-    entry.connect_activate({
-        let send_btn = send_btn.clone();
-        move |_| { send_btn.emit_clicked(); }
-    });
+
 
     let entry_clone = entry.clone();
     let pending_send = pending_files.clone();
@@ -342,13 +376,65 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     let welcome_for_remove = welcome.clone();
     let chat_title_send = chat_title.clone();
     let chat_store_send = chat_store.clone();
-    let ai_bridge: Rc<RefCell<Option<crate::ai_bridge::AiBridge>>> = Rc::new(RefCell::new(None));
-    let ai_bridge_send = ai_bridge.clone();
     let model_sel = model_selector.selected_model.clone();
-
     let chat_store_for_response = chat_store.clone();
+    let ai_bridge = crate::ai_bridge::AiBridge::new();
+    let ai_bridge = Rc::new(ai_bridge);
+    ai_bridge.webview.set_size_request(1, 1);
+    ai_bridge.webview.set_opacity(0.0);
+    root.pack_start(&ai_bridge.webview, false, false, 0);
 
+    
+    let bridge_for_switch = ai_bridge.clone();
+    let notebook_for_switch = ai_notebook.clone();
+    let send_for_model = send_btn.clone();
+    let entry_for_model = entry.clone();
+    *model_selector.on_model_changed.borrow_mut() = Some(Box::new(move |model: String| {
+        bridge_for_switch.load_model(&model);
+        // Model loaded in background, view in AI Notebook if needed
+        let has_text = !entry_for_model.text().trim().is_empty();
+        let ready = !model.is_empty() && has_text;
+        send_for_model.set_sensitive(ready);
+        if ready {
+            send_for_model.style_context().remove_class("send-btn-disabled");
+        } else {
+            send_for_model.style_context().add_class("send-btn-disabled");
+        }
+        println!("[Chat] Model switched to: {}", model);
+    }));
+    
+    let bridge_for_response = ai_bridge.clone();
+    let message_area_clone = message_area.clone();
+    let chat_store_clone = chat_store_for_response.clone();
+    let logger_clone = logger.clone();
+    ai_bridge.on_response(move |response: String| {
+        let mut store = chat_store_clone.borrow_mut();
+        store.add_message_to_active("assistant", &response);
+        store.save();
+        logger_clone.borrow_mut().log(crate::logger::LogLevel::Info, "AI", &format!("Response: {}", &response[..response.len().min(50)]));
+        
+        let msg_area = message_area_clone.clone();
+        let resp = response.clone();
+        gtk::glib::idle_add_local(move || {
+            let msg_row = GtkBox::new(Orientation::Horizontal, 0);
+            msg_row.set_halign(Align::Start);
+            msg_row.set_margin_top(4);
+            msg_row.set_margin_bottom(4);
+            msg_row.set_margin_start(24);
+            
+            let bubble = Label::new(Some(&resp));
+            bubble.set_wrap(true);
+            bubble.set_max_width_chars(60);
+            bubble.style_context().add_class("ai-bubble");
+            msg_row.pack_start(&bubble, true, true, 0);
+            msg_area.pack_start(&msg_row, false, false, 0);
+            msg_row.show_all();
+            gtk::glib::ControlFlow::Break
+        });
+    });
 
+    let bridge_send = ai_bridge.clone();
+    let notebook = ai_notebook.clone();
     send_btn.connect_clicked(move |_| {
         let chat_title = chat_title_send.clone();
         let chat_store = chat_store_send.clone();
@@ -367,43 +453,8 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
             let model = model_sel.borrow().clone();
             store.create_chat(&text, &model);
             store.save();
-            
-            let wv = notebook_webviews.borrow().get(&model).cloned();
-            if let Some(webview) = wv {
-                let bridge = crate::ai_bridge::AiBridge::from_webview(webview, &model);
-                let message_area_clone = message_area.clone();
-                let chat_store_clone = chat_store_for_response.clone();
-                let logger_clone = logger.clone();
-                bridge.on_response(move |response: String| {
-                    let mut store = chat_store_clone.borrow_mut();
-                    store.add_message_to_active("assistant", &response);
-                    store.save();
-                    logger_clone.borrow_mut().log(crate::logger::LogLevel::Info, "AI", &format!("Response: {}", &response[..response.len().min(50)]));
-                    
-                    let msg_area = message_area_clone.clone();
-                    let resp = response.clone();
-                    gtk::glib::idle_add_local(move || {
-                        let msg_row = GtkBox::new(Orientation::Horizontal, 0);
-                        msg_row.set_halign(Align::Start);
-                        msg_row.set_margin_top(4);
-                        msg_row.set_margin_bottom(4);
-                        msg_row.set_margin_start(24);
-                        
-                        let bubble = Label::new(Some(&resp));
-                        bubble.set_wrap(true);
-                        bubble.set_max_width_chars(60);
-                        bubble.style_context().add_class("ai-bubble");
-                        msg_row.pack_start(&bubble, true, true, 0);
-                        msg_area.pack_start(&msg_row, false, false, 0);
-                        msg_row.show_all();
-                        gtk::glib::ControlFlow::Break
-                    });
-                });
-                *ai_bridge_send.borrow_mut() = Some(bridge);
-            } else {
-                logger.borrow_mut().log(crate::logger::LogLevel::Error, "Chat", &format!("No webview found for model: {}", model));
-            }
-            
+            bridge_send.load_model(&model);
+            // Model loaded in hidden webview
             logger.borrow_mut().log(crate::logger::LogLevel::Info, "Chat", &format!("New chat created: {}", &text[..text.len().min(30)]));
         }
         if !text.trim().is_empty() {
@@ -440,11 +491,7 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
             message_area.pack_start(&msg_row, false, false, 0);
             msg_row.show_all();
             
-            if let Some(ref bridge) = *ai_bridge_send.borrow() {
-                bridge.send_message(&text);
-            } else {
-                println!("[Chat] No AiBridge available, message not sent to AI");
-            }
+            bridge_send.send_message(&text);
         }
         message_area.show_all();
 

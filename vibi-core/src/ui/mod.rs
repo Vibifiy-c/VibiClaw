@@ -7,6 +7,7 @@ pub mod browser;
 pub mod settings;
 pub mod model_selector;
 pub mod ai_notebook;
+pub mod login_center;
 
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Orientation, Align, Button, Label, Stack};
@@ -151,6 +152,8 @@ pub fn build_window(app: &Application) {
     let storage = Rc::new(RefCell::new(crate::storage::AppStorage::load()));
     let chat_store = Rc::new(RefCell::new(crate::chat_store::ChatStore::load()));
     let root = GtkBox::new(Orientation::Horizontal, 0);
+    let main_overlay = gtk::Overlay::new();
+    main_overlay.add_overlay(&root);
 
     let main_stack = Stack::new();
     main_stack.set_hexpand(true);
@@ -178,12 +181,14 @@ pub fn build_window(app: &Application) {
         }
     };
 
-    let ai_notebook = ai_notebook::build_ai_notebook();
-    let ai_notebook_webviews = ai_notebook.webviews.clone();
+    let ai_notebook = Rc::new(RefCell::new(ai_notebook::build_ai_notebook(main_stack.clone())));
+
+    let login_center_page = login_center::build_login_center_page(main_stack.clone());
+    main_stack.add_titled(&login_center_page.container, "login_center", "Login Center");
 
     let refresh_chats_cell: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
     let refresh_chats_placeholder = refresh_chats_cell.clone();
-    let (chat_view, preview_panel, clear_handle) = chat::build_chat_view(chat_store.clone(), logger.clone(), ai_notebook_webviews, Box::new(move || {
+    let (chat_view, preview_panel, clear_handle) = chat::build_chat_view(chat_store.clone(), logger.clone(), ai_notebook.clone(), Box::new(move || {
         if let Some(ref f) = *refresh_chats_placeholder.borrow() { f(); }
     }), Box::new(title_updater), Box::new(reset_chat_title));
 
@@ -204,7 +209,7 @@ pub fn build_window(app: &Application) {
 
     main_stack.add_titled(&chat_view, "chat", "Chat");
     main_stack.add_titled(&agentic_view, "agentic", "Agentic Tool");
-    main_stack.add_titled(&ai_notebook.container, "ai_notebook", "AI Notebook");
+    main_stack.add_titled(&ai_notebook.borrow().container.clone(), "ai_notebook", "AI Notebook");
     main_stack.add_titled(&logs_view, "logs", "Logs");
     main_stack.add_titled(&browser_view, "browser", "Browser");
     main_stack.add_titled(&settings_view, "settings", "Settings");
@@ -229,7 +234,7 @@ pub fn build_window(app: &Application) {
         .default_width(1280)
         .default_height(800)
         .build();
-    window.add(&root);
+    window.add(&main_overlay);
 
     let saved_theme = storage.borrow().theme.clone();
     if saved_theme == "dark" {

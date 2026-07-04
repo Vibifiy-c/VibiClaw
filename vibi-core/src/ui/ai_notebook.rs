@@ -1,17 +1,11 @@
 use gtk::prelude::*;
-use gtk::{Box as GtkBox, Label, Orientation, Notebook, ScrolledWindow, PolicyType};
-use webkit2gtk::{WebView, WebViewExt};
-use std::collections::HashMap;
-use std::rc::Rc;
-use std::cell::RefCell;
+use gtk::{Box as GtkBox, Button, Label, Orientation, Align, ScrolledWindow, PolicyType};
 
 pub struct AiNotebook {
     pub container: GtkBox,
-    pub notebook: Notebook,
-    pub webviews: Rc<RefCell<HashMap<String, WebView>>>,
 }
 
-pub fn build_ai_notebook() -> AiNotebook {
+pub fn build_ai_notebook(stack: gtk::Stack) -> AiNotebook {
     let container = GtkBox::new(Orientation::Vertical, 0);
     container.set_hexpand(true);
     container.set_vexpand(true);
@@ -33,54 +27,48 @@ pub fn build_ai_notebook() -> AiNotebook {
     container.pack_start(&topbar, false, false, 0);
     container.pack_start(&divider, false, false, 0);
     
-    let notebook = Notebook::new();
-    notebook.set_hexpand(true);
-    notebook.set_vexpand(true);
-    notebook.set_scrollable(true);
-    notebook.set_tab_pos(gtk::PositionType::Top);
+    let scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+    scroll.set_vexpand(true);
+    scroll.set_policy(PolicyType::Never, PolicyType::Automatic);
     
-    let webviews: Rc<RefCell<HashMap<String, WebView>>> = Rc::new(RefCell::new(HashMap::new()));
+    let content = GtkBox::new(Orientation::Vertical, 20);
+    content.set_margin_start(60);
+    content.set_margin_end(60);
+    content.set_margin_top(40);
+    content.set_margin_bottom(40);
+    content.set_halign(Align::Start);
+    content.set_valign(Align::Start);
     
-    let models = vec![
-        ("chatgpt", "🟢 ChatGPT", "https://chat.openai.com"),
-        ("claude", "🟠 Claude", "https://claude.ai"),
-        ("gemini", "🔵 Gemini", "https://gemini.google.com"),
-        ("deepseek", "🐋 DeepSeek", "https://chat.deepseek.com"),
-        ("grok", "⚡ Grok", "https://grok.com"),
-        ("qwen", "🟣 Qwen", "https://tongyi.aliyun.com/qianwen"),
-        ("kimi", "🌙 Kimi", "https://kimi.moonshot.cn"),
-    ];
+    let card = Button::new();
+    card.style_context().add_class("login-master-card");
+    card.set_size_request(240, 200);
     
-    for (id, name, url) in &models {
-        let scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
-        scroll.set_policy(PolicyType::Automatic, PolicyType::Automatic);
-        
-        let webview = WebView::new();
-        webview.set_hexpand(true);
-        webview.set_vexpand(true);
-        webview.load_uri(url);
-        
-        scroll.add(&webview);
-        
-        let tab_label = GtkBox::new(Orientation::Horizontal, 4);
-        let parts: Vec<&str> = name.splitn(2, ' ').collect();
-        let icon_text = parts.get(0).unwrap_or(&"");
-        let name_text = parts.get(1).unwrap_or(&"");
-        let icon = Label::new(Some(icon_text));
-        let text = Label::new(Some(name_text));
-        tab_label.pack_start(&icon, false, false, 0);
-        tab_label.pack_start(&text, false, false, 0);
-        tab_label.show_all();
-        
-        notebook.append_page(&scroll, Some(&tab_label));
-        webviews.borrow_mut().insert(id.to_string(), webview.clone());
-    }
+    let card_content = GtkBox::new(Orientation::Vertical, 16);
+    card_content.set_margin_top(24);
     
-    container.pack_start(&notebook, true, true, 0);
+    let card_icon = Label::new(Some("🔐"));
+    card_icon.style_context().add_class("login-master-icon");
+    card_icon.set_halign(Align::Center);
+    card_content.pack_start(&card_icon, false, false, 0);
     
-    AiNotebook {
-        container,
-        notebook,
-        webviews,
-    }
+    let card_title = Label::new(Some("AI Login Center"));
+    card_title.style_context().add_class("login-master-title");
+    card_title.set_halign(Align::Center);
+    card_content.pack_start(&card_title, false, false, 0);
+    
+    let card_sub = Label::new(Some("Manage AI accounts"));
+    card_sub.style_context().add_class("login-master-sub");
+    card_sub.set_halign(Align::Center);
+    card_content.pack_start(&card_sub, false, false, 0);
+    
+    card.add(&card_content);
+    content.pack_start(&card, false, false, 0);
+    
+    let s = stack.clone();
+    card.connect_clicked(move |_| s.set_visible_child_name("login_center"));
+    
+    scroll.add(&content);
+    container.pack_start(&scroll, true, true, 0);
+    
+    AiNotebook { container }
 }

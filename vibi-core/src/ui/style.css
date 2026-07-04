@@ -15,8 +15,9 @@ entry { border: none; outline: none; box-shadow: none; }
 .light label.title { color: #1a1523; }
 .light .welcome-title { color: #1a1523; }
 .light .welcome-subtitle { color: #6b6580; }
-.light .input-box { background-color: #ffffff; border: 1px solid #ddc8eb; }
-.light .chat-entry { color: #1a1523; }
+.light .input-box { background-color: #ffffff; border: 1px solid #ddc8eb; padding: 14px 18px; }
+.light .chat-entry { color: #1a1523; font-size: 16px; min-height: 24px; }
+.light .send-btn-disabled { background-color: #ede0f5; color: #a09bb8; }
 .light .input-hint { color: #a09bb8; }
 .light .user-bubble { background-color: #8B00FF; }
 .light .ai-bubble { background-color: #f5f3ff; color: #1a1523; border: 1px solid #ddc8eb; }
@@ -85,10 +86,26 @@ entry { border: none; outline: none; box-shadow: none; }
 .light .settings-btn-danger:hover { background: rgba(229, 57, 53, 0.1); }
 .light .model-trigger { background: #ffffff; border: 1px solid #ddc8eb; color: #6b6580; }
 .light .model-trigger:hover { background: #f2e8f7; border-color: #8B00FF; }
-.light .model-panel { background: #ffffff; border: 1px solid #ddc8eb; }
-.light .model-row:hover { background: #f2e8f7; }
-.light .model-name { color: #1a1523; }
-.light .model-desc { color: #6b6580; }
+.light .model-popup-backdrop { background: rgba(0, 0, 0, 0.4); }
+.light .model-popup-card { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .model-popup-title { color: #1a1523; }
+.light .model-popup-close { color: #6b6580; }
+.light .model-popup-close:hover { background: #f2e8f7; color: #1a1523; }
+.light .model-popup-separator { background: #ddc8eb; }
+.light .model-company-name { color: #6b6580; }
+.light .model-company-sep { background: #ddc8eb; }
+.light .model-popup-backdrop { background: rgba(0, 0, 0, 0.4); }
+.light .model-popup-card { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .model-popup-title { color: #1a1523; }
+.light .model-popup-close { color: #6b6580; }
+.light .model-popup-close:hover { background: #f2e8f7; color: #1a1523; }
+.light .model-popup-separator { background: #ddc8eb; }
+.light .model-company-name { color: #6b6580; }
+.light .model-company-sep { background: #ddc8eb; }
+.light .model-subcard { border: 1px solid #ede0f5; background: #faf9ff; }
+.light .model-subcard:hover { border-color: #8B00FF; background: #f2e8f7; box-shadow: 0 2px 12px rgba(139, 0, 255, 0.15); }
+.light .model-item-name { color: #1a1523; }
+.light .model-item-desc { color: #6b6580; }
 
 /* Dark theme */
 window { background-color: #141414; }
@@ -115,13 +132,14 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 .welcome-icon { background-color: #a020f0; border-radius: 14px; }
 .welcome-title { color: #f0eeff; font-size: 22px; font-weight: 500; }
 .welcome-subtitle { color: #9d94c4; font-size: 14px; }
-.input-box { background-color: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 24px; padding: 8px 12px; }
+.input-box { background-color: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 24px; padding: 14px 18px; }
 .attachment-pill { background-color: #3d2b45; border: 1px solid #a020f0; border-radius: 16px; padding: 4px 10px; }
 .attach-btn { background-color: transparent; color: #5c5480; font-size: 16px; border-radius: 999px; }
 .attach-btn:hover { background-color: #3d2b45; color: #a020f0; }
-.chat-entry { background-color: transparent; color: #f0eeff; font-size: 14px; }
+.chat-entry { background-color: transparent; color: #f0eeff; font-size: 16px; min-height: 24px; }
 .send-btn { background-color: #a020f0; color: white; border-radius: 999px; }
 .send-btn:hover { background-color: #8e1cd9; }
+.send-btn-disabled { background-color: #2f2f2f; color: #5c5480; }
 .topbar { background-color: transparent; }
 .topbar-title { color: #f0eeff; font-size: 14px; font-weight: 500; }
 .topbar-divider { background-color: #3f3f3f; margin: 0 24px; }
@@ -223,9 +241,82 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 .model-trigger:hover { background: #3d2b45; border-color: #a020f0; }
 .model-trigger-icon { font-size: 16px; }
 .model-trigger-arrow { color: #5c5480; font-size: 12px; }
-.model-panel { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 12px; }
-.model-row { padding: 8px 12px; border-radius: 8px; }
-.model-row:hover { background: #3d2b45; }
-.model-icon { font-size: 20px; }
-.model-name { color: #f0eeff; font-size: 14px; font-weight: 500; }
-.model-desc { color: #5c5480; font-size: 11px; }
+.model-popup-backdrop { background: rgba(0, 0, 0, 0.75); }
+.model-popup-card { background: #1e1e1e; border: 1px solid #3f3f3f; border-radius: 20px; }
+.model-popup-header { background: transparent; }
+.model-popup-title { color: #f0eeff; font-size: 20px; font-weight: 600; }
+.model-popup-close { background: transparent; color: #5c5480; font-size: 18px; padding: 4px 10px; border-radius: 8px; }
+.model-popup-close:hover { background: #3d2b45; color: #f0eeff; }
+.model-popup-separator { background: #3f3f3f; }
+.model-company-column { padding: 0 8px; }
+.model-company-icon { font-size: 16px; }
+.model-company-name { color: #9d94c4; font-size: 12px; font-weight: 600; }
+.model-company-sep { background: #3f3f3f; margin: 4px 0; }
+.model-popup-backdrop { background: rgba(0, 0, 0, 0.75); }
+.model-popup-card { background: #1e1e1e; border: 1px solid #3f3f3f; border-radius: 20px; }
+.model-popup-header { background: transparent; }
+.model-popup-title { color: #f0eeff; font-size: 20px; font-weight: 600; }
+.model-popup-close { background: transparent; color: #5c5480; font-size: 18px; padding: 4px 10px; border-radius: 8px; }
+.model-popup-close:hover { background: #3d2b45; color: #f0eeff; }
+.model-popup-separator { background: #3f3f3f; }
+.model-company-column { padding: 0 8px; }
+.model-company-icon { font-size: 16px; }
+.model-company-name { color: #9d94c4; font-size: 12px; font-weight: 600; }
+.model-company-sep { background: #3f3f3f; margin: 4px 0; }
+.model-subcard { padding: 10px 12px; border-radius: 10px; border: 1px solid #2f2f2f; background: #252525; }
+.model-subcard:hover { border-color: #a020f0; background: #3d2b45; box-shadow: 0 2px 12px rgba(160, 32, 240, 0.2); }
+.model-item-name { color: #f0eeff; font-size: 13px; font-weight: 500; }
+.model-item-desc { color: #5c5480; font-size: 10px; }
+.light .model-popup-backdrop { background: rgba(0, 0, 0, 0.4); }
+.light .model-popup-card { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .model-popup-title { color: #1a1523; }
+.light .model-popup-close { color: #6b6580; }
+.light .model-popup-close:hover { background: #f2e8f7; color: #1a1523; }
+.light .model-popup-separator { background: #ddc8eb; }
+.light .model-company-name { color: #6b6580; }
+.light .model-company-sep { background: #ddc8eb; }
+.light .model-subcard { border: 1px solid #ede0f5; background: #faf9ff; }
+.light .model-subcard:hover { border-color: #8B00FF; background: #f2e8f7; box-shadow: 0 2px 12px rgba(139, 0, 255, 0.15); }
+.light .model-item-name { color: #1a1523; }
+.light .model-item-desc { color: #6b6580; }
+.login-master-card { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 16px; padding: 20px 24px; }
+.login-master-card:hover { border-color: #a020f0; background: #3d2b45; }
+.login-master-icon { font-size: 28px; }
+.login-master-title { color: #f0eeff; font-size: 16px; font-weight: 600; }
+.login-master-sub { color: #5c5480; font-size: 12px; }
+.login-master-arrow { color: #5c5480; font-size: 18px; }
+.login-center-list { background: transparent; }
+.login-row { padding: 10px 16px; border-radius: 10px; }
+.login-row:hover { background: #3d2b45; }
+.login-row-icon { font-size: 20px; }
+.login-row-name { color: #f0eeff; font-size: 14px; font-weight: 500; }
+.login-row-status { color: #9d94c4; font-size: 12px; }
+.login-row-btn { background: #a020f0; color: white; border: none; border-radius: 8px; padding: 6px 16px; font-size: 12px; font-weight: 500; }
+.login-row-btn:hover { background: #8e1cd9; }
+.login-status-in { color: #4caf50; }
+.login-status-out { color: #e53935; }
+.light .login-master-card { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .login-master-card:hover { border-color: #8B00FF; background: #f2e8f7; }
+.light .login-master-title { color: #1a1523; }
+.light .login-master-sub { color: #6b6580; }
+.light .login-master-arrow { color: #6b6580; }
+.light .login-row:hover { background: #f2e8f7; }
+.light .login-row-name { color: #1a1523; }
+.light .login-row-status { color: #6b6580; }
+.login-back-btn { background: transparent; border: 1px solid #3f3f3f; color: #9d94c4; border-radius: 8px; padding: 4px 12px; font-size: 13px; }
+.login-back-btn:hover { background: #3d2b45; color: #a020f0; }
+.login-ai-card { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 16px; padding: 24px 20px; }
+.login-ai-card:hover { border-color: #a020f0; background: #3d2b45; }
+.login-ai-icon { font-size: 36px; }
+.login-ai-name { color: #f0eeff; font-size: 16px; font-weight: 600; }
+.login-ai-domain { color: #5c5480; font-size: 11px; }
+.login-ai-status { color: #9d94c4; font-size: 12px; }
+.login-ai-btn { background: #a020f0; color: white; border: none; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 500; }
+.login-ai-btn:hover { background: #8e1cd9; }
+.light .login-back-btn { border-color: #ddc8eb; color: #6b6580; }
+.light .login-back-btn:hover { background: #f2e8f7; color: #8B00FF; }
+.light .login-ai-card { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .login-ai-card:hover { border-color: #8B00FF; background: #f2e8f7; }
+.light .login-ai-name { color: #1a1523; }
+.light .login-ai-domain { color: #6b6580; }
+.light .login-ai-status { color: #6b6580; }
