@@ -1,9 +1,11 @@
 use webkit2gtk::{WebView, WebViewExt};
 use gtk::prelude::*;
+use glib::translate::ToGlibPtr;
 use gio;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::time::Instant;
+use std::ffi::CString;
 
 pub struct AiBridge {
     pub webview: WebView,
@@ -14,12 +16,44 @@ pub struct AiBridge {
     page_loaded: Rc<RefCell<bool>>,
 }
 
+fn setup_persistent_cookies(webview: &WebView) {
+    unsafe {
+        let cookie_dir = dirs::config_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("vibi-ai")
+            .join("webkit");
+        std::fs::create_dir_all(&cookie_dir).ok();
+        
+        let cookie_path = cookie_dir.join("cookies.db");
+        let path_str = cookie_path.to_str().unwrap();
+        let c_path = CString::new(path_str).unwrap();
+        
+        use webkit2gtk_sys::{webkit_web_view_get_context, webkit_web_context_get_cookie_manager, webkit_cookie_manager_set_persistent_storage, WEBKIT_COOKIE_PERSISTENT_STORAGE_SQLITE};
+        let wv_ptr: *mut webkit2gtk_sys::WebKitWebView = webview.to_glib_none().0;
+        let context = webkit_web_view_get_context(wv_ptr);
+        if !context.is_null() {
+            let manager = webkit_web_context_get_cookie_manager(context);
+            if !manager.is_null() {
+                webkit_cookie_manager_set_persistent_storage(
+                    manager,
+                    c_path.as_ptr(),
+                    WEBKIT_COOKIE_PERSISTENT_STORAGE_SQLITE,
+                );
+                println!("[AiBridge] Persistent cookie storage set: {}", path_str);
+            }
+        }
+    }
+}
+
 impl AiBridge {
     pub fn new() -> Self {
         let webview = WebView::new();
         webview.set_size_request(1, 1);
         webview.set_opacity(0.0);
         webview.load_uri("about:blank");
+        
+        // Set up persistent cookies via FFI
+        setup_persistent_cookies(&webview);
         
         let page_loaded = Rc::new(RefCell::new(false));
         let model = Rc::new(RefCell::new(String::new()));
