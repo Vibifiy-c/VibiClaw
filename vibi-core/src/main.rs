@@ -15,7 +15,9 @@ use gtk::prelude::*;
 use gtk::{Application, CssProvider};
 
 fn main() {
-    // Set persistent WebKit data directory for cookies
+    std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+    std::env::set_var("GTK_CSD", "0");
+    
     let webkit_data = dirs::config_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("vibi-ai")

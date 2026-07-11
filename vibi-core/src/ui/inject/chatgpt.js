@@ -3,11 +3,18 @@
     window.__vibi_obs = true;
     window.__vibi_last = '';
     
+    function htmlToMarkdown(html) {
+        var txt = document.createElement('div');
+        txt.innerHTML = html;
+        var md = txt.innerText || txt.textContent || '';
+        return md.trim();
+    }
+    
     function findLatestResponse() {
         var msgs = document.querySelectorAll('[data-message-author-role="assistant"]');
         if (msgs.length === 0) msgs = document.querySelectorAll('.markdown');
         if (msgs.length === 0) msgs = document.querySelectorAll('article');
-        if (msgs.length > 0) return msgs[msgs.length - 1].textContent.trim();
+        if (msgs.length > 0) return htmlToMarkdown(msgs[msgs.length - 1].innerHTML);
         return '';
     }
     
@@ -23,26 +30,36 @@
         return Array.from(bytes).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
     }
     
-    var captureCount = 0;
+    var chunkQueue = [];
+    var sendingChunks = false;
+    
+    function sendNextChunk() {
+        if (chunkQueue.length === 0) {
+            sendingChunks = false;
+            history.replaceState(null, '', window.location.pathname + window.location.search + '#vibi-done');
+            return;
+        }
+        sendingChunks = true;
+        var chunk = chunkQueue.shift();
+        history.replaceState(null, '', window.location.pathname + window.location.search + '#vibi-' + chunk.idx + '-' + chunk.data);
+        setTimeout(sendNextChunk, 100);
+    }
+    
     function tryCapture() {
-        var generating = isStillGenerating();
+        if (isStillGenerating()) return;
         var text = findLatestResponse();
-        window.__vibi_debug = JSON.stringify({
-            count: captureCount++,
-            generating: generating,
-            textLen: text.length,
-            lastLen: window.__vibi_last.length,
-            same: text === window.__vibi_last
-        });
-        if (generating) return;
         if (text.length > 0 && text !== window.__vibi_last) {
             window.__vibi_last = text;
-            history.replaceState(null, '', window.location.pathname + window.location.search + '#vibi-' + toHex(text));
+            var hex = toHex(text);
+            var chunkSize = 1800;
+            chunkQueue = [];
+            for (var i = 0; i < hex.length; i += chunkSize) {
+                chunkQueue.push({ idx: Math.floor(i / chunkSize), data: hex.substring(i, i + chunkSize) });
+            }
+            if (!sendingChunks) sendNextChunk();
         }
     }
     
     setInterval(tryCapture, 1000);
-    
     new MutationObserver(tryCapture).observe(document.body, { childList: true, subtree: true, characterData: true });
-        window.location.hash = 'vibi-test-ok';
 })();

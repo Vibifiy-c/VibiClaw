@@ -8,6 +8,7 @@ pub mod settings;
 pub mod model_selector;
 pub mod ai_notebook;
 pub mod login_center;
+pub mod renderer;
 
 use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Orientation, Align, Button, Label, Stack};

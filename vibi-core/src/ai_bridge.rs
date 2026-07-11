@@ -14,6 +14,7 @@ pub struct AiBridge {
     sleep_enabled: Rc<RefCell<bool>>,
     model: Rc<RefCell<String>>,
     page_loaded: Rc<RefCell<bool>>,
+    chunk_buffer: Rc<RefCell<Vec<String>>>,
 }
 
 fn setup_persistent_cookies(webview: &WebView) {
@@ -65,6 +66,7 @@ impl AiBridge {
             sleep_enabled: Rc::new(RefCell::new(true)),
             model: model.clone(),
             page_loaded: page_loaded.clone(),
+            chunk_buffer: Rc::new(RefCell::new(Vec::new())),
         };
         
         let cb = bridge.response_callback.clone();
@@ -79,6 +81,12 @@ impl AiBridge {
                     *loaded.borrow_mut() = true;
                     let model_str = current_model.borrow().clone();
                     println!("[AiBridge] Page loaded for {}", model_str);
+                    
+                    // Reset observer state so new model's JS can run
+                    webview.run_javascript(
+                        "delete window.__vibi_obs; delete window.__vibi_last; delete window.__vibi_send;",
+                        None::<&gio::Cancellable>, |_| {}
+                    );
                     
                     let js = match model_str.as_str() {
                         "chatgpt" => include_str!("ui/inject/chatgpt.js"),
@@ -97,19 +105,33 @@ impl AiBridge {
             }
         });
         
+        let chunk_buf = bridge.chunk_buffer.clone();
         webview.connect_uri_notify(move |wv| {
             if let Some(uri) = wv.uri() {
                 let uri_str = uri.to_string();
-                println!("[AiBridge] URI changed: {}", &uri_str[..uri_str.len().min(100)]);
                 if let Some(hash_pos) = uri_str.find("#vibi-") {
-                    let hex = &uri_str[hash_pos + "#vibi-".len()..];
-                    let hex = hex.split('&').next().unwrap_or(hex).split('?').next().unwrap_or(hex);
-                    if let Ok(text) = hex_decode(hex) {
-                        if !text.is_empty() {
-                            println!("[AiBridge] Response: {}", &text[..text.len().min(100)]);
-                            if let Some(ref callback) = *cb.borrow() {
-                                callback(text);
+                    let payload = &uri_str[hash_pos + "#vibi-".len()..];
+                    let payload = payload.split('&').next().unwrap_or(payload).split('?').next().unwrap_or(payload);
+                    
+                    if payload == "done" {
+                        let full_hex: String = chunk_buf.borrow().iter().map(|s| s.as_str()).collect();
+                        chunk_buf.borrow_mut().clear();
+                        if let Ok(text) = hex_decode(&full_hex) {
+                            if !text.is_empty() {
+                                println!("[AiBridge] Response ({} chars): {}...", text.len(), &text[..text.len().min(100)]);
+                                if let Some(ref callback) = *cb.borrow() {
+                                    callback(text);
+                                }
                             }
+                        }
+                    } else if let Some(dash_pos) = payload.find('-') {
+                        let idx_str = &payload[..dash_pos];
+                        let data = &payload[dash_pos + 1..];
+                        if let Ok(idx) = idx_str.parse::<usize>() {
+                            while chunk_buf.borrow().len() <= idx {
+                                chunk_buf.borrow_mut().push(String::new());
+                            }
+                            chunk_buf.borrow_mut()[idx] = data.to_string();
                         }
                     }
                 }
@@ -151,7 +173,7 @@ impl AiBridge {
             "deepseek" => "https://chat.deepseek.com",
             "grok" => "https://grok.com",
             "qwen" => "https://tongyi.aliyun.com/qianwen",
-            "kimi" => "https://kimi.moonshot.cn",
+            "kimi" => "https://www.kimi.com",
             _ => "https://chat.openai.com",
         };
         
@@ -174,6 +196,10 @@ impl AiBridge {
                 "window.__vibi_send && window.__vibi_send('{}');",
                 escaped
             ),
+            "deepseek" => format!(
+                "(function() {{ var input = document.querySelector('textarea._27c9245') || document.querySelector('textarea'); if(input) {{ input.value = '{}'; input.dispatchEvent(new Event('input', {{ bubbles: true }})); var attempts = 0; var trySend = setInterval(function() {{ attempts++; var btn = document.querySelector('.ds-button--icon') || document.querySelector('[class*=\"ds-button\"]'); if(btn && !btn.disabled) {{ btn.click(); clearInterval(trySend); }} if(attempts > 20) clearInterval(trySend); }}, 300); }} }})()",
+                escaped
+            ),
             _ => format!(
                 "(function() {{ var input = document.querySelector('[contenteditable=\"true\"]') || document.querySelector('textarea'); if(input) {{ input.textContent = '{}'; input.dispatchEvent(new Event('input', {{ bubbles: true }})); setTimeout(function() {{ var btn = document.querySelector('button[type=\"submit\"]'); if(btn) btn.click(); }}, 800); }} }})()",
                 escaped
@@ -187,11 +213,23 @@ impl AiBridge {
             wv.run_javascript(&js, None::<&gio::Cancellable>, |_| {});
             println!("[AiBridge] JS sent (page was loaded)");
         } else {
-            println!("[AiBridge] Page not loaded, waiting...");
+            println!("[AiBridge] Page not loaded, reloading model...");
+            let model_str = self.model.borrow().clone();
+            let url = match model_str.as_str() {
+                "chatgpt" => "https://chat.openai.com",
+                "claude" => "https://claude.ai",
+                "gemini" => "https://gemini.google.com",
+                "deepseek" => "https://chat.deepseek.com",
+                "grok" => "https://grok.com",
+                "qwen" => "https://tongyi.aliyun.com/qianwen",
+                "kimi" => "https://www.kimi.com",
+                _ => "https://chat.openai.com",
+            };
+            self.webview.load_uri(url);
             gtk::glib::timeout_add_local(std::time::Duration::from_millis(300), move || {
                 if *loaded.borrow() {
                     wv.run_javascript(&js, None::<&gio::Cancellable>, |_| {});
-                    println!("[AiBridge] JS sent (after waiting)");
+                    println!("[AiBridge] JS sent (after reload)");
                     gtk::glib::ControlFlow::Break
                 } else {
                     gtk::glib::ControlFlow::Continue

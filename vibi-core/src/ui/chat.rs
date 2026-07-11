@@ -380,8 +380,6 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
     let chat_store_for_response = chat_store.clone();
     let ai_bridge = crate::ai_bridge::AiBridge::new();
     let ai_bridge = Rc::new(ai_bridge);
-    ai_bridge.webview.set_size_request(1, 1);
-    ai_bridge.webview.set_opacity(0.0);
     root.pack_start(&ai_bridge.webview, false, false, 0);
 
     
@@ -422,11 +420,9 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
             msg_row.set_margin_bottom(4);
             msg_row.set_margin_start(24);
             
-            let bubble = Label::new(Some(&resp));
-            bubble.set_wrap(true);
-            bubble.set_max_width_chars(60);
-            bubble.style_context().add_class("ai-bubble");
-            msg_row.pack_start(&bubble, true, true, 0);
+            let rendered = crate::ui::renderer::render_markdown(&resp);
+            rendered.style_context().add_class("ai-bubble");
+            msg_row.pack_start(&rendered, true, true, 0);
             msg_area.pack_start(&msg_row, false, false, 0);
             msg_row.show_all();
             gtk::glib::ControlFlow::Break
