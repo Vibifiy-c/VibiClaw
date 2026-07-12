@@ -109,6 +109,7 @@ impl AiBridge {
         webview.connect_uri_notify(move |wv| {
             if let Some(uri) = wv.uri() {
                 let uri_str = uri.to_string();
+                println!("[AiBridge] URI: {}", uri_str);
                 if let Some(hash_pos) = uri_str.find("#vibi-") {
                     let payload = &uri_str[hash_pos + "#vibi-".len()..];
                     let payload = payload.split('&').next().unwrap_or(payload).split('?').next().unwrap_or(payload);
@@ -116,14 +117,18 @@ impl AiBridge {
                     if payload == "done" {
                         let full_hex: String = chunk_buf.borrow().iter().map(|s| s.as_str()).collect();
                         chunk_buf.borrow_mut().clear();
-                        if let Ok(text) = hex_decode(&full_hex) {
-                            if !text.is_empty() {
-                                println!("[AiBridge] Response ({} chars): {}...", text.len(), &text[..text.len().min(100)]);
-                                if let Some(ref callback) = *cb.borrow() {
-                                    callback(text);
-                                }
+                         if let Ok(text) = hex_decode(&full_hex) {
+                        if !text.is_empty() {
+                            println!("[AiBridge] Response ({} chars): {}", text.len(), text);
+                            if let Some(ref callback) = *cb.borrow() {
+                                callback(text);
                             }
+                        } else {
+                            println!("[AiBridge] ERROR: Decoded text is empty");
                         }
+                    } else {
+                        println!("[AiBridge] ERROR: hex_decode failed for {} chars", full_hex.len());
+                    }
                     } else if let Some(dash_pos) = payload.find('-') {
                         let idx_str = &payload[..dash_pos];
                         let data = &payload[dash_pos + 1..];
@@ -210,7 +215,11 @@ impl AiBridge {
         let loaded = self.page_loaded.clone();
         
         if *loaded.borrow() {
-            wv.run_javascript(&js, None::<&gio::Cancellable>, |_| {});
+            wv.run_javascript(&js, None::<&gio::Cancellable>, move |result| {
+                if let Err(e) = result {
+                    println!("[AiBridge] JS ERROR: {:?}", e);
+                }
+            });
             println!("[AiBridge] JS sent (page was loaded)");
         } else {
             println!("[AiBridge] Page not loaded, reloading model...");
@@ -228,7 +237,11 @@ impl AiBridge {
             self.webview.load_uri(url);
             gtk::glib::timeout_add_local(std::time::Duration::from_millis(300), move || {
                 if *loaded.borrow() {
-                    wv.run_javascript(&js, None::<&gio::Cancellable>, |_| {});
+                    wv.run_javascript(&js, None::<&gio::Cancellable>, move |result| {
+                        if let Err(e) = result {
+                            println!("[AiBridge] JS ERROR (reload): {:?}", e);
+                        }
+                    });
                     println!("[AiBridge] JS sent (after reload)");
                     gtk::glib::ControlFlow::Break
                 } else {

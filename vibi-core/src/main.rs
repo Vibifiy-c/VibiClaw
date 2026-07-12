@@ -10,11 +10,38 @@ mod storage;
 mod chat_store;
 mod crypto;
 mod logger;
+mod debug;
+mod hardware_usage;
 
 use gtk::prelude::*;
 use gtk::{Application, CssProvider};
+use glib::LogLevel;
 
 fn main() {
+    // Global panic hook - logs crashes with location
+    std::panic::set_hook(Box::new(|info| {
+        let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
+            s.to_string()
+        } else if let Some(s) = info.payload().downcast_ref::<String>() {
+            s.clone()
+        } else {
+            "Unknown panic".to_string()
+        };
+        let location = info.location().map(|l| format!("{}:{}", l.file(), l.line())).unwrap_or_default();
+        eprintln!("[main.rs] [Error] in {} : {}", location, msg);
+    }));
+    
+    // GTK/GLib warning and critical logs
+    glib::log_set_default_handler(|domain, level, msg| {
+        let domain_str = domain.unwrap_or_default();
+        let level_str = match level {
+            LogLevel::Error | LogLevel::Critical => "[Error]",
+            LogLevel::Warning => "[Warning]",
+            _ => "[Debug]",
+        };
+        eprintln!("[main.rs] {} in {} : {}", level_str, domain_str, msg);
+    });
+    
     std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
     std::env::set_var("GTK_CSD", "0");
     
@@ -29,7 +56,10 @@ fn main() {
         .application_id("com.vibi.ai")
         .build();
 
-    app.connect_startup(|_| load_css());
+    app.connect_startup(|_| {
+        load_css();
+        hardware_usage::start_hardware_server();
+    });
     app.connect_activate(ui::build_window);
 
     app.run();

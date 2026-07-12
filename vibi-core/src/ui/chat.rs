@@ -10,6 +10,7 @@ use crate::ui::ai_notebook::AiNotebook;
 use std::rc::Rc;
 use std::cell::RefCell;
 use rand::Rng;
+use crate::vb_log;
 
 const WELCOME_QUOTES: &[&str] = &[
     "The stage is yours!",
@@ -398,7 +399,7 @@ pub fn build_chat_view(chat_store: Rc<RefCell<ChatStore>>, logger: Rc<RefCell<cr
         } else {
             send_for_model.style_context().add_class("send-btn-disabled");
         }
-        println!("[Chat] Model switched to: {}", model);
+        ("[Chat] Model switched to: {}", model);
     }));
     
     let bridge_for_response = ai_bridge.clone();

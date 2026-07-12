@@ -10,20 +10,10 @@
         return md.trim();
     }
     
-    function findLatestResponse() {
-        var msgs = document.querySelectorAll('response-element');
-        if (msgs.length === 0) msgs = document.querySelectorAll('.md-content');
-        if (msgs.length === 0) msgs = document.querySelectorAll('.response-content');
-        if (msgs.length === 0) {
-            var turns = document.querySelectorAll('model-response, .model-response');
-            if (turns.length > 0) {
-                var html = turns[turns.length - 1].innerHTML;
-                return htmlToMarkdown(html).replace(/^Gemini said\s*/i, '');
-            }
-        }
-        if (msgs.length > 0) {
-            var html = msgs[msgs.length - 1].innerHTML;
-            return htmlToMarkdown(html).replace(/^Gemini said\s*/i, '');
+            function findLatestResponse() {
+        var panels = document.querySelectorAll('.markdown-main-panel');
+        if (panels.length > 0) {
+            return panels[panels.length - 1].innerText.trim().replace(/^Gemini said\s*/i, '');
         }
         return '';
     }
@@ -102,4 +92,9 @@
     
     // Signal that Gemini JS is loaded
     history.replaceState(null, '', window.location.pathname + window.location.search + '#vibi-gemini-ready');
+    
+        setInterval(function() {
+        history.replaceState(null, '', window.location.pathname + window.location.search + '#vibi-alive-' + Date.now());
+    }, 5000);
+    
 })();

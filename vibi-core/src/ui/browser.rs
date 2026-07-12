@@ -45,7 +45,25 @@ pub fn build_browser_view() -> GtkBox {
     let webview = WebView::new();
     webview.set_hexpand(true);
     webview.set_vexpand(true);
-    webview.load_uri("https://www.google.com");
+    let newtab_path = std::env::current_dir()
+        .unwrap_or_default()
+        .join("src/ui/browser/newtab.html");
+    let uri = format!("file://{}", newtab_path.to_str().unwrap_or("about:blank"));
+    webview.load_uri(&uri);
+    
+    webview.connect_load_changed(|wv, event| {
+        match event {
+            webkit2gtk::LoadEvent::Finished => {
+                println!("[Browser] Page loaded: {}", wv.uri().unwrap_or_default());
+            }
+            webkit2gtk::LoadEvent::Committed => {
+                println!("[Browser] Loading: {}", wv.uri().unwrap_or_default());
+            }
+            _ => {
+                println!("[Browser][Error] Load failed");
+            }
+        }
+    });
 
     let wv = webview.clone();
     let url_clone = url_entry.clone();
@@ -72,12 +90,18 @@ pub fn build_browser_view() -> GtkBox {
     refresh_btn.connect_clicked(move |_| { wv_refresh.reload(); });
 
     let wv_home = webview.clone();
-    home_btn.connect_clicked(move |_| { wv_home.load_uri("https://www.google.com"); });
+    let home_path = std::env::current_dir()
+        .unwrap_or_default()
+        .join("src/ui/browser/newtab.html");
+    let home_uri = format!("file://{}", home_path.to_str().unwrap_or("about:blank"));
+    home_btn.connect_clicked(move |_| { wv_home.load_uri(&home_uri); });
 
     let url_bar = url_entry.clone();
     webview.connect_uri_notify(move |wv| {
         if let Some(uri) = wv.uri() {
-            url_bar.set_text(&uri.to_string());
+            let uri_str = uri.to_string();
+            println!("[Browser] URI: {}", uri_str);
+            url_bar.set_text(&uri_str);
         }
     });
 
