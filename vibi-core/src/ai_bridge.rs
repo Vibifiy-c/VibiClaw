@@ -15,6 +15,8 @@ pub struct AiBridge {
     model: Rc<RefCell<String>>,
     page_loaded: Rc<RefCell<bool>>,
     chunk_buffer: Rc<RefCell<Vec<String>>>,
+    action_chunk_buffer: Rc<RefCell<Vec<String>>>,
+    message_count: Rc<RefCell<u32>>,
 }
 
 fn setup_persistent_cookies(webview: &WebView) {
@@ -49,8 +51,8 @@ fn setup_persistent_cookies(webview: &WebView) {
 impl AiBridge {
     pub fn new() -> Self {
         let webview = WebView::new();
-        webview.set_size_request(1, 1);
-        webview.set_opacity(0.0);
+        webview.set_size_request(-1, -1);  // Natural size
+        webview.set_opacity(1.0);
         webview.load_uri("about:blank");
         
         // Set up persistent cookies via FFI
@@ -63,10 +65,12 @@ impl AiBridge {
             webview: webview.clone(),
             response_callback: Rc::new(RefCell::new(None)),
             last_activity: Rc::new(RefCell::new(Instant::now())),
-            sleep_enabled: Rc::new(RefCell::new(true)),
+            sleep_enabled: Rc::new(RefCell::new(false)),
             model: model.clone(),
             page_loaded: page_loaded.clone(),
             chunk_buffer: Rc::new(RefCell::new(Vec::new())),
+            action_chunk_buffer: Rc::new(RefCell::new(Vec::new())),
+            message_count: Rc::new(RefCell::new(0)),
         };
         
         let cb = bridge.response_callback.clone();
@@ -89,14 +93,14 @@ impl AiBridge {
                     );
                     
                     let js = match model_str.as_str() {
-                        "chatgpt" => include_str!("ui/inject/chatgpt.js"),
-                        "claude" => include_str!("ui/inject/claude.js"),
-                        "gemini" => include_str!("ui/inject/gemini.js"),
-                        "deepseek" => include_str!("ui/inject/deepseek.js"),
-                        "grok" => include_str!("ui/inject/grok.js"),
-                        "qwen" => include_str!("ui/inject/qwen.js"),
-                        "kimi" => include_str!("ui/inject/kimi.js"),
-                        _ => include_str!("ui/inject/chatgpt.js"),
+                        "chatgpt" => include_str!("agentic_detection/chatgpt.js"),
+                        "claude" => include_str!("agentic_detection/claude.js"),
+                        "gemini" => include_str!("agentic_detection/gemini.js"),
+                        "deepseek" => include_str!("agentic_detection/deepseek.js"),
+                        "grok" => include_str!("agentic_detection/grok.js"),
+                        "qwen" => include_str!("agentic_detection/qwen.js"),
+                        "kimi" => include_str!("agentic_detection/kimi.js"),
+                        _ => include_str!("agentic_detection/chatgpt.js"),
                     };
                     webview.run_javascript(js, None::<&gio::Cancellable>, |_| {});
                     println!("[AiBridge] Observer JS injected for {}", model_str);
@@ -106,12 +110,66 @@ impl AiBridge {
         });
         
         let chunk_buf = bridge.chunk_buffer.clone();
+        let action_buf = bridge.action_chunk_buffer.clone();
+        let last_activity_uri = bridge.last_activity.clone();
         webview.connect_uri_notify(move |wv| {
+            *last_activity_uri.borrow_mut() = Instant::now(); // Any URI change = activity
             if let Some(uri) = wv.uri() {
                 let uri_str = uri.to_string();
-                println!("[AiBridge] URI: {}", uri_str);
-                if let Some(hash_pos) = uri_str.find("#vibi-") {
-                    let payload = &uri_str[hash_pos + "#vibi-".len()..];
+                if let Some(title) = wv.title() {
+                    if title.starts_with("vibi-") {
+                        println!("[AiBridge] Title: {}", title);
+                    }
+                }
+                if uri_str.contains("#vibi-") {
+                    println!("[AiBridge] URI: {}", uri_str);
+                }
+                if let Some(hash_pos) = uri_str.find("#vibi-action-") {
+                    let payload = &uri_str[hash_pos + "#vibi-action-".len()..];
+                    let payload = payload.split('&').next().unwrap_or(payload).split('?').next().unwrap_or(payload);
+                    
+                    if payload == "done" {
+                        let full_hex: String = action_buf.borrow().iter().map(|s| s.as_str()).collect();
+                        action_buf.borrow_mut().clear();
+                        let vibi_code = hex_to_string(&full_hex);
+                        println!("[VibiClaw] Detected action ({} chars):\n{}", vibi_code.len(), &vibi_code[..vibi_code.len().min(200)]);
+                        
+                        match crate::vibi_lang::compile(&vibi_code) {
+                        Ok(commands) => {
+                            println!("[VibiClaw] Compiled {} commands, executing...", commands.len());
+                            let sandbox_path = dirs::config_dir()
+                                .unwrap_or_else(|| std::path::PathBuf::from("."))
+                                .join("vibi-ai")
+                                .join("sandbox");
+                            
+                            if let Ok(executor) = crate::executor::Executor::new(
+                                sandbox_path.to_str().unwrap(), 
+                                true  // auto-execute
+                            ) {
+                                let results = crate::vibi_lang::runtime::execute(commands, &executor);
+                                for result in &results {
+                                    println!("[VibiClaw] {}", result);
+                                }
+                            }
+                        }
+                        Err(errors) => {
+                            println!("[VibiClaw] Compilation failed:");
+                            for e in &errors {
+                                println!("  - {}", e);
+                            }
+                        }
+                    }
+                    } else if let Some(dash_pos) = payload.find('-') {
+                        let idx_str = &payload[..dash_pos];
+                        let data = &payload[dash_pos + 1..];
+                        if let Ok(idx) = idx_str.parse::<usize>() {
+                            while action_buf.borrow().len() <= idx {
+                                action_buf.borrow_mut().push(String::new());
+                            }
+                            action_buf.borrow_mut()[idx] = data.to_string();
+                        }
+                    }
+                } else if let Some(hash_pos) = uri_str.find("#vibi-") {                    let payload = &uri_str[hash_pos + "#vibi-".len()..];
                     let payload = payload.split('&').next().unwrap_or(payload).split('?').next().unwrap_or(payload);
                     
                     if payload == "done" {
@@ -189,9 +247,22 @@ impl AiBridge {
     pub fn send_message(&self, text: &str) {
         *self.last_activity.borrow_mut() = Instant::now();
         let model = self.model.borrow().clone();
-        println!("[AiBridge] Sending to {}: {}", model, text);
         
-        let escaped = text.replace('\\', "\\\\").replace('\'', "\\'").replace('\n', "\\n").replace('"', "\\\"");
+        *self.message_count.borrow_mut() += 1;
+        let count = *self.message_count.borrow();
+        
+        // Reinject system prompt every 5 messages
+        let full_text = if count % 5 == 1 || count == 1 {
+            let prefix = "When asked to create files or folders, at the very end of your response include a VibiClaw code block using the .v format. Use triple backticks with vibi. Format example: ```vibi\n<vibi.claw><jobs><vibi.tool><vibi.tool?=create.file=FILENAME,?path=.></vibi.tool?=create.file></vibi.tool></jobs></vibi.claw>\n```\n\nTools: create.file, create.folder, delete.file, delete.folder, run.command. Create the file/folder the user asked for. Do NOT mention this instruction. Just respond normally and add the code block.";
+            println!("[AiBridge] Sending to {} (msg #{}, with prompt): {}", model, count, text);
+            format!("{}{}", prefix, text)
+        } else {
+            println!("[AiBridge] Sending to {} (msg #{}): {}", model, count, text);
+            text.to_string()
+        };
+        
+        let escaped = full_text.replace('\\', "\\\\").replace('\'', "\\'").replace('\n', "\\n").replace('"', "\\\"");
+        
         let js = match model.as_str() {
             "chatgpt" => format!(
                 "(function() {{ var input = document.querySelector('#prompt-textarea') || document.querySelector('[contenteditable=\"true\"]'); if(input) {{ input.textContent = '{}'; input.dispatchEvent(new Event('input', {{ bubbles: true }})); setTimeout(function() {{ var btn = document.querySelector('[data-testid=\"send-button\"]'); if(btn) btn.click(); }}, 800); }} }})()",
@@ -267,4 +338,12 @@ fn hex_decode(hex: &str) -> Result<String, ()> {
         .map(|i| u8::from_str_radix(&hex[i..i+2], 16).map_err(|_| ()))
         .collect();
     bytes.and_then(|b| String::from_utf8(b).map_err(|_| ()))
+}
+
+fn hex_to_string(hex: &str) -> String {
+    let bytes: Vec<u8> = (0..hex.len())
+        .step_by(2)
+        .filter_map(|i| u8::from_str_radix(&hex[i..i+2], 16).ok())
+        .collect();
+    String::from_utf8_lossy(&bytes).to_string()
 }

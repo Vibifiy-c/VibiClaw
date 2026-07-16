@@ -7,6 +7,9 @@ pub struct AppStorage {
     pub theme: String,
     pub sidebar_collapsed: bool,
     pub projects: Vec<StoredProject>,
+    pub api_mode: bool,
+    pub openai_api_key: Option<String>,
+    pub gemini_api_key: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -33,6 +36,9 @@ impl AppStorage {
             theme: "light".to_string(),
             sidebar_collapsed: false,
             projects: Vec::new(),
+            api_mode: false,
+            openai_api_key: None,
+            gemini_api_key: None,
         }
     }
 

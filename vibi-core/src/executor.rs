@@ -39,8 +39,14 @@ impl Executor {
             CommandKind::CreateFile | CommandKind::EditFile => {
                 self.run_file_write(cmd)
             }
+            CommandKind::CreateFolder => {
+                self.run_folder_create(cmd)
+            }
             CommandKind::DeleteFile => {
                 self.run_file_delete(cmd)
+            }
+            CommandKind::DeleteFolder => {
+                self.run_folder_delete(cmd)
             }
             CommandKind::RunShell | CommandKind::InstallDep => {
                 self.run_shell(cmd)
@@ -98,5 +104,21 @@ impl Executor {
         } else {
             Err(if stderr.is_empty() { "Command failed".to_string() } else { stderr })
         }
+    }
+
+        fn run_folder_create(&self, cmd: &Command) -> Result<String, String> {
+        let path = cmd.path.as_deref()
+            .ok_or("No path specified")?;
+        self.sandbox.create_folder(path)
+            .map(|_| format!("Created folder: {}", path))
+            .map_err(|e| e.to_string())
+    }
+
+    fn run_folder_delete(&self, cmd: &Command) -> Result<String, String> {
+        let path = cmd.path.as_deref()
+            .ok_or("No path specified")?;
+        self.sandbox.delete_folder(path)
+            .map(|_| format!("Deleted folder: {}", path))
+            .map_err(|e| e.to_string())
     }
 }

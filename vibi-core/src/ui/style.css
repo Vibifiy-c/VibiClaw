@@ -331,3 +331,17 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 .light .code-block { background: #f5f3ff; border: 1px solid #ddc8eb; }
 .light .code-block-lang { color: #6b6580; }
 .light .code-block-text { color: #1a1523; }
+.ai-dashboard-card { background: #2f2f2f; border: 1px solid #3f3f3f; border-radius: 16px; }
+.ai-dashboard-card:hover { border-color: #a020f0; background: #3d2b45; }
+.ai-dashboard-icon { font-size: 36px; }
+.ai-dashboard-name { color: #f0eeff; font-size: 15px; font-weight: 600; }
+.ai-dashboard-desc { color: #5c5480; font-size: 11px; }
+.floating-back-btn { background: transparent; border: 1px solid #3f3f3f; color: #9d94c4; border-radius: 8px; padding: 6px 14px; font-size: 13px; }
+.floating-back-btn:hover { background: #3d2b45; color: #a020f0; }
+
+.light .ai-dashboard-card { background: #ffffff; border: 1px solid #ddc8eb; }
+.light .ai-dashboard-card:hover { border-color: #8B00FF; background: #f2e8f7; }
+.light .ai-dashboard-name { color: #1a1523; }
+.light .ai-dashboard-desc { color: #6b6580; }
+.light .floating-back-btn { border-color: #ddc8eb; color: #6b6580; }
+.light .floating-back-btn:hover { background: #f2e8f7; color: #8B00FF; }

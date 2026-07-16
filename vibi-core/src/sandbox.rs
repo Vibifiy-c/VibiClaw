@@ -28,9 +28,15 @@ impl Sandbox {
     let canonical_joined = if joined.exists() {
         fs::canonicalize(&joined).ok()?
     } else {
-        let parent = joined.parent()?;
+        let parent = joined.parent().unwrap_or(&self.root);
+        // Try to canonicalize the parent; if it fails (parent doesn't exist), reject
         let canonical_parent = fs::canonicalize(parent).ok()?;
-        canonical_parent.join(joined.file_name()?)
+        let resolved = canonical_parent.join(joined.file_name()?);
+        // Check that the canonical parent is inside the sandbox
+        if !canonical_parent.starts_with(&canonical_root) {
+            return None;
+        }
+        resolved
     };
 
     if canonical_joined.starts_with(&canonical_root) {
@@ -66,5 +72,23 @@ impl Sandbox {
 
     pub fn working_dir(&self) -> &Path {
         &self.root
+    }
+
+        pub fn create_folder(&self, relative_path: &str) -> std::io::Result<()> {
+        let path = self.resolve(relative_path)
+            .ok_or_else(|| std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Path escapes sandbox"
+            ))?;
+        fs::create_dir_all(path)
+    }
+
+    pub fn delete_folder(&self, relative_path: &str) -> std::io::Result<()> {
+        let path = self.resolve(relative_path)
+            .ok_or_else(|| std::io::Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                "Path escapes sandbox"
+            ))?;
+        fs::remove_dir_all(path)
     }
 }

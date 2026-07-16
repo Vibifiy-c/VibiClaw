@@ -27,7 +27,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     logo_vibi.style_context().add_class("logo-text-vibi");
     header.pack_start(&logo_vibi, false, false, 0);
 
-    let logo_ai = Label::new(Some("AI"));
+    let logo_ai = Label::new(Some("Claw"));
     logo_ai.style_context().add_class("logo-text-ai");
     header.pack_start(&logo_ai, false, false, 0);
 

@@ -231,7 +231,7 @@ pub fn build_window(app: &Application) {
 
     let window = ApplicationWindow::builder()
         .application(app)
-        .title("Vibi AI")
+        .title("Vibi Claw")
         .default_width(1280)
         .default_height(800)
         .build();

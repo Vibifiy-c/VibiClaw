@@ -1,0 +1,17 @@
+<vibi.claw>
+  <jobs>
+    <vibi.tool>
+      <vibi.tool?=create.folder="chatgpt's test  ",?path=".">
+      </vibi.tool?=create.folder>
+
+      <vibi.tool?=create.file="chatgpt.gpt",?path="./chatgpt's test  ">
+      </vibi.tool?=create.file>
+
+      <vibi.tool?=create.file="chatgptresults.rv",?path="./chatgpt's test  ">
+      </vibi.tool?=create.file>
+
+      <vibi.tool?=create.file="chatgpt.session.data",?path="./chatgpt's test  ">
+      </vibi.tool?=create.file>
+    </vibi.tool>
+  </jobs>
+</vibi.claw>

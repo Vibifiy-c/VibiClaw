@@ -4,8 +4,10 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CommandKind {
     CreateFile,
+    CreateFolder,
     EditFile,
     DeleteFile,
+    DeleteFolder,
     RunShell,
     InstallDep,
 }
