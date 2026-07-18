@@ -1,5 +1,4 @@
 use gtk::prelude::*;
-use glib::ControlFlow;
 use gtk::{Box as GtkBox, Label, Orientation, Align, ScrolledWindow, PolicyType, Button, Stack, Separator};
 use gtk::glib;
 use pango;
@@ -136,19 +135,15 @@ fn build_sessions_page(logger: Rc<RefCell<Logger>>, stack: Stack, back_btn: Butt
                 card.pack_start(&delete_btn, false, false, 0);
 
                 let stack_delete = stack.clone();
-                let flow_clone = past_flow.clone();
-                let back_del = back_btn.clone();
-                let title_del = title_label.clone();
-                let logger_del = logger.clone();
+                let _flow_clone = past_flow.clone();
+                let _back_del = back_btn.clone();
+                let _title_del = title_label.clone();
+                let _logger_del = logger.clone();
                 let card_clone = card.clone();
                 let path_del2 = path_del.clone();
                 delete_btn.connect_clicked(move |_| {
                     let path_del3 = path_del2.clone();
-                    let flow_clone3 = flow_clone.clone();
                     let stack_del3 = stack_delete.clone();
-                    let back_del3 = back_del.clone();
-                    let title_del3 = title_del.clone();
-                    let logger_del3 = logger_del.clone();
                     let card_clone2 = card_clone.clone();
                     show_delete_log_confirm(&path_del3, stack_del3, move || {
                         animate_card_out(&card_clone2, || {});

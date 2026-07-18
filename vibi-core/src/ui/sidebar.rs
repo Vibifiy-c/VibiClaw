@@ -1,12 +1,11 @@
 use gtk::prelude::*;
-use glib::ControlFlow;
 use gtk::{Box as GtkBox, Button, Label, Orientation, Separator, Align};
 use gtk::glib;
 use pango;
 use std::rc::Rc;
 use std::cell::{Cell, RefCell};
 
-pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppStorage>>, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, clear_handle: crate::ui::chat::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) -> (GtkBox, GtkBox, Rc<RefCell<Option<Label>>>) {
+pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppStorage>>, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, clear_handle: crate::ui::dashboard::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) -> (GtkBox, GtkBox, Rc<RefCell<Option<Label>>>) {
     let sidebar = GtkBox::new(Orientation::Vertical, 0);
     sidebar.style_context().add_class("sidebar");
     sidebar.set_width_request(260);
@@ -42,19 +41,13 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     sidebar.pack_start(&header, false, false, 0);
     sidebar.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
 
-    let new_chat_btn = Button::with_label("+  New chat");
-    new_chat_btn.style_context().add_class("new-chat-btn");
-    new_chat_btn.set_margin_top(12);
-    new_chat_btn.set_margin_bottom(12);
-    new_chat_btn.set_margin_start(8);
-    new_chat_btn.set_margin_end(8);
-    sidebar.pack_start(&new_chat_btn, false, false, 0);
+
 
     let nav_box = GtkBox::new(Orientation::Vertical, 2);
     nav_box.set_margin_start(8);
     nav_box.set_margin_end(8);
 
-    let chat_btn = nav_item_button_with_icon("Chat", "💬", None);
+    let chat_btn = nav_item_button_with_icon("Dashboard", "", None);
     chat_btn.style_context().add_class("active");
     nav_box.pack_start(&chat_btn, false, false, 0);
 
@@ -134,12 +127,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         notebook_btn_3.style_context().add_class("active");
     });
 
-    let new_chat_stack = stack.clone();
-    let new_chat_agentic_btn = agentic_btn.clone();
-    let new_chat_notebook_btn = notebook_btn.clone();
-    let new_chat_chat_btn = chat_btn.clone();
-    let new_chat_store = chat_store.clone();
-    let new_chat_label = chat_btn_label.borrow().clone();
+
     let stack_logs = stack.clone();
     let logs_btn_4 = logs_btn.clone();
     let chat_btn_4 = chat_btn.clone();
@@ -168,24 +156,8 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         browser_btn_4.style_context().add_class("active");
     });
 
-    let clear_handle_new = clear_handle.clone();
-    let new_chat_logs_btn = logs_btn.clone();
-    let new_chat_browser_btn = browser_btn.clone();
     let browser_for_anim = browser_btn.clone();
     let browser_for_settings = browser_btn.clone();
-    new_chat_btn.connect_clicked(move |_| {
-        new_chat_store.borrow_mut().set_active("");
-        clear_handle_new.clear();
-        new_chat_stack.set_visible_child_name("chat");
-        new_chat_agentic_btn.style_context().remove_class("active");
-        new_chat_notebook_btn.style_context().remove_class("active");
-        new_chat_logs_btn.style_context().remove_class("active");
-        new_chat_browser_btn.style_context().remove_class("active");
-        new_chat_chat_btn.style_context().add_class("active");
-        if let Some(ref lbl) = new_chat_label {
-            lbl.set_text("Chat");
-        }
-    });
 
     sidebar.pack_start(&nav_box, false, false, 0);
     sidebar.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
@@ -277,7 +249,6 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     let logo_icon_clone = logo_icon.clone();
     let logo_vibi_clone = logo_vibi.clone();
     let logo_ai_clone = logo_ai.clone();
-    let new_chat_btn_clone = new_chat_btn.clone();
     let nav_box_clone = nav_box.clone();
     let recent_label_clone = recent_label.clone();
     let chat_list_box_clone = chat_list_box.clone();
@@ -305,7 +276,6 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         logo_icon_clone.set_visible(!new_state);
         logo_vibi_clone.set_visible(!new_state);
         logo_ai_clone.set_visible(!new_state);
-        new_chat_btn_clone.set_visible(!new_state);
         nav_box_clone.set_visible(!new_state);
         recent_label_clone.set_visible(!new_state);
         chat_list_box_clone.set_visible(!new_state);

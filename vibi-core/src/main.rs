@@ -1,12 +1,9 @@
 mod types;
-mod analyzer;
 mod sandbox;
 mod executor;
-mod commands;
 mod ui;
 mod ai_bridge;
 mod vibi_lang;
-mod user_commands;
 mod storage;
 mod chat_store;
 mod crypto;

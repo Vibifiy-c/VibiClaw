@@ -18,6 +18,7 @@ struct GeminiContent {
 }
 
 #[derive(Serialize)]
+#[derive(Deserialize)]
 struct GeminiPart {
     text: String,
 }
@@ -25,8 +26,8 @@ struct GeminiPart {
 #[derive(Deserialize)]
 struct GeminiResponse {
     candidates: Vec<GeminiCandidate>,
-    modelVersion: String,
-    usageMetadata: GeminiUsage,
+    model_version: String,
+    usage_metadata: GeminiUsage,
 }
 
 #[derive(Deserialize)]
@@ -41,7 +42,7 @@ struct GeminiContentResponse {
 
 #[derive(Deserialize)]
 struct GeminiUsage {
-    totalTokenCount: u32,
+    total_token_count: u32,
 }
 
 impl GeminiApi {
@@ -90,8 +91,8 @@ impl AiApi for GeminiApi {
 
         Ok(ApiResponse {
             content,
-            model: body.modelVersion,
-            tokens_used: body.usageMetadata.totalTokenCount,
+            model: body.model_version,
+            tokens_used: body.usage_metadata.total_token_count,
         })
     }
 

@@ -82,7 +82,7 @@ pub fn build_login_center_page(stack: gtk::Stack) -> LoginCenterPage {
     LoginCenterPage { container }
 }
 
-fn build_ai_login_card(id: &str, emoji: &str, name: &str, domain: &str, url: &str) -> GtkBox {
+fn build_ai_login_card(_id: &str, emoji: &str, name: &str, domain: &str, url: &str) -> GtkBox {
     let card = GtkBox::new(Orientation::Vertical, 16);
     card.style_context().add_class("login-ai-card");
     card.set_size_request(240, 220);

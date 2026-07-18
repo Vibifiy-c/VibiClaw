@@ -1,270 +1,458 @@
 use super::lexer::Token;
-use crate::types::{Command, CommandKind};
+use crate::types::Command;
 
 #[derive(Debug)]
 pub struct VibiProgram {
-    pub jobs: Vec<Job>,
-    pub prints: Vec<String>,
-    pub variables: Vec<String>,
+    pub commands: Vec<Command>,
 }
 
 #[derive(Debug)]
-pub struct Job {
-    pub tool: Tool,
-    pub conditions: Vec<Condition>,
-}
-
-#[derive(Debug)]
-pub enum Tool {
-    CreateFile { name: String, path: Option<String> },
-    SaveFile { name: String, path: Option<String>, content: Option<String> },
-    DeleteFile { name: String, path: Option<String> },
-    CreateFolder { name: String, path: Option<String> },
-    SaveFolder { name: String, path: Option<String> },
-    DeleteFolder { name: String, path: Option<String> },
-    RunCommand { command: String, dir: Option<String> },
-    EditFile { name: String, path: Option<String>, content: Option<String>, search: Option<String>, replace: Option<String> },
-    InstallDep { dependency: String, path: Option<String> },
-    DeleteDep { dependency: String, path: Option<String> },
-}
-
-#[derive(Debug)]
-pub struct Condition {
-    pub left: String,
-    pub operator: String,
-    pub right: String,
-    pub body: Vec<Job>,
-    pub else_body: Vec<Job>,
+struct Job {
+    tool_name: String,
+    params: Vec<(String, String)>,
+    items: Vec<String>,
+    mappings: Vec<(String, String)>,
+    content_blocks: Vec<(String, String)>,
 }
 
 pub fn parse(tokens: Vec<Token>) -> Result<VibiProgram, Vec<String>> {
-    let mut program = VibiProgram {
-        jobs: Vec::new(),
-        prints: Vec::new(),
-        variables: Vec::new(),
-    };
-    
     let mut iter = tokens.iter().peekable();
-    let mut errors = Vec::new();
+    let _errors = Vec::<String>::new();
     
-    // Expect <vibi.claw>
-    match iter.next() {
-        Some(Token::RootOpen) => {}
-        _ => errors.push("Missing <vibi.claw> root tag".to_string()),
-    }
+    // Skip main vibi.claw header
+    skip_header(&mut iter);
     
-    while let Some(token) = iter.next() {
-        match token {
-            Token::JobsOpen => {
-                program.jobs = parse_jobs(&mut iter);
-            }
-            Token::Print(parts) => {
-                program.prints.push(parts.join(""));
-            }
-            Token::VarDecl(names) => {
-                program.variables = names.clone();
-            }
-            Token::If => {
-                // Parse condition and add to last job
-                if let Some(cond) = parse_condition(&mut iter) {
-                    if let Some(last_job) = program.jobs.last_mut() {
-                        last_job.conditions.push(cond);
-                    }
-                }
-            }
+    // Expect opening block
+    expect_token(&mut iter, &Token::LBrace, "Expected '{'")?;
+    expect_identifier(&mut iter, "jobs")?;
+    
+    let jobs = parse_jobs(&mut iter);
+    
+    expect_identifier(&mut iter, "jobs")?;
+    expect_token(&mut iter, &Token::LParen, "Expected '('")?;
+    expect_token(&mut iter, &Token::RParen, "Expected ')'")?;
+    expect_token(&mut iter, &Token::RBrace, "Expected '}'")?;
+    
+    let commands = jobs_to_commands(&jobs);
+    
+    Ok(VibiProgram { commands })
+}
+
+fn skip_header(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) {
+    while let Some(tok) = iter.peek() {
+        match tok {
+            Token::LBrace => break,
             Token::Eof => break,
-            _ => {}
+            _ => { iter.next(); }
         }
     }
-    
-    if errors.is_empty() {
-        Ok(program)
-    } else {
-        Err(errors)
+}
+
+fn expect_token(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>, expected: &Token, err: &str) -> Result<(), Vec<String>> {
+    match iter.next() {
+        Some(t) if t == expected => Ok(()),
+        _ => Err(vec![err.to_string()]),
+    }
+}
+
+fn expect_identifier(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>, expected: &str) -> Result<(), Vec<String>> {
+    let got = iter.next();
+    eprintln!("expect_identifier: want='{}', got={:?}", expected, got);
+    match got {
+        Some(Token::Identifier(s)) if s == expected => Ok(()),
+        other => Err(vec![format!("Expected '{}', got: {:?}", expected, other)]),
+    }
+}
+
+fn parse_string(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> String {
+    match iter.next() {
+        Some(Token::String(s)) => s.clone(),
+        Some(Token::Identifier(s)) => s.clone(),
+        _ => String::new(),
+    }
+}
+
+fn parse_bracket_string(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> String {
+    match iter.next() {
+        Some(Token::LBracket) => {
+            let s = parse_string(iter);
+            iter.next(); // skip RBracket
+            s
+        }
+        Some(Token::String(s)) => s.clone(),
+        _ => String::new(),
     }
 }
 
 fn parse_jobs(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Vec<Job> {
     let mut jobs = Vec::new();
     
-    while let Some(token) = iter.next() {
-        match token {
-            Token::JobsClose => break,
-            Token::ToolFamilyOpen => {
-                jobs.extend(parse_tool_family(iter));
-            }
-            Token::ToolCallOpen { tool, params } => {
-                jobs.push(Job {
-                    tool: params_to_tool(tool, params),
-                    conditions: Vec::new(),
-                });
-            }
-            Token::Eof => break,
-            _ => {}
-        }
-    }
-    
-    jobs
-}
-
-fn parse_tool_family(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Vec<Job> {
-    let mut jobs = Vec::new();
-    
-    while let Some(token) = iter.next() {
-        match token {
-            Token::ToolFamilyClose => break,
-            Token::ToolCallOpen { tool, params } => {
-                jobs.push(Job {
-                    tool: params_to_tool(tool, params),
-                    conditions: Vec::new(),
-                });
-            }
-            Token::Eof => break,
-            _ => {}
-        }
-    }
-    
-    jobs
-}
-
-fn params_to_tool(tool: &str, params: &[(String, String)]) -> Tool {
-    let mut map = std::collections::HashMap::new();
-    for (k, v) in params {
-        map.insert(k.clone(), v.clone());
-    }
-    
-    // First unnamed param (key="") is the name
-    let name = params.first()
-        .filter(|(k, _)| k.is_empty())
-        .map(|(_, v)| v.clone())
-        .unwrap_or_default();
-    
-    let get = |key: &str| map.get(key).cloned();
-    
-    println!("[Parser] Tool: '{}', name: '{}', params: {:?}", tool, name, params);
-    
-    match tool {
-        "create.file" => Tool::CreateFile {
-            name,
-            path: get("path"),
-        },
-        "save.file" => Tool::SaveFile {
-            name: name.clone(),
-            path: get("path"),
-            content: get("content"),
-        },
-        "delete.file" => Tool::DeleteFile {
-            name: name.clone(),
-            path: get("path"),
-        },
-        "create.folder" => Tool::CreateFolder {
-            name: name.clone(),
-            path: get("path"),
-        },
-        "save.folder" => Tool::SaveFolder {
-            name: name.clone(),
-            path: get("path"),
-        },
-        "delete.folder" => Tool::DeleteFolder {
-            name: name.clone(),
-            path: get("path"),
-        },
-        "run.command" => Tool::RunCommand {
-            command: name.clone(),
-            dir: get("dir"),
-        },
-        "edit.file" => Tool::EditFile {
-            name: name.clone(),
-            path: get("path"),
-            content: get("content"),
-            search: get("search"),
-            replace: get("replace"),
-        },
-        "install.dependencies" => Tool::InstallDep {
-            dependency: name.clone(),
-            path: get("install?path").or_else(|| get("path")),
-        },
-        "delete.dependencies" => Tool::DeleteDep {
-            dependency: name.clone(),
-            path: get("delete?path").or_else(|| get("path")),
-        },
-        _ => Tool::RunCommand {
-            command: format!("unknown tool: {}", tool),
-            dir: None,
-        },
-    }
-}
-
-fn parse_condition(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Option<Condition> {
-    let mut left = String::new();
-    let mut operator = String::new();
-    let mut right = String::new();
-    let mut body = Vec::new();
-    let mut else_body = Vec::new();
-    let mut in_else = false;
-    
-    // Parse: {condition}={value}
-    while let Some(token) = iter.next() {
-        match token {
-            Token::BlockOpen => {
-                // Parse body until } or else
-                while let Some(t) = iter.next() {
-                    match t {
-                        Token::BlockClose => break,
-                        Token::Else => { in_else = true; }
-                        Token::ElseIf => { in_else = true; }
-                        Token::ToolCallOpen { tool, params } => {
-                            let job = Job {
-                                tool: params_to_tool(tool, params),
-                                conditions: Vec::new(),
-                            };
-                            if in_else { else_body.push(job); } else { body.push(job); }
+    loop {
+        match iter.peek() {
+            Some(Token::LBrace) => {
+                iter.next();
+                if let Some(Token::Identifier(_)) = iter.peek() {
+                    // might be a job or might be jobs()
+                    let next_is_vibi = matches!(iter.peek(), Some(Token::Identifier(s)) if s == "vibi.tool");
+                    if next_is_vibi {
+                        if let Some(job) = parse_job(iter) {
+                            jobs.push(job);
                         }
-                        _ => {}
+                        // Also handle && chained jobs inside same block
+                        loop {
+                            match iter.peek() {
+                                Some(Token::And) => {
+                                    iter.next();
+                                    if let Some(job) = parse_job(iter) {
+                                        jobs.push(job);
+                                    }
+                                }
+                                _ => break,
+                            }
+                        }
+                        expect_token(iter, &Token::RBrace, "Expected '}'").ok();
+                    } else {
+                        // End of jobs, backtrack
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            _ => break,
+        }
+    }
+    jobs
+}
+
+fn parse_job(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Option<Job> {
+    // vibi.tool = [tool_name]
+    expect_identifier(iter, "vibi.tool").ok()?;
+    expect_token(iter, &Token::LBracket, "").ok();
+    
+    let tool_name = parse_string(iter);
+    
+    expect_token(iter, &Token::RBracket, "").ok();
+    
+    let mut params = Vec::new();
+    let mut items = Vec::new();
+    let mut mappings = Vec::new();
+    let mut content_blocks = Vec::new();
+    
+    // Parse params after tool: ?= or = 
+    loop {
+        match iter.peek() {
+            Some(Token::Pipe) => {
+                iter.next();
+                // Next could be param or item
+                match iter.peek() {
+                    Some(Token::Identifier(key)) => {
+                        let key = key.clone();
+                        iter.next();
+                        match iter.peek() {
+                            Some(Token::QuestionEq) | Some(Token::Colon) => {
+                                iter.next();
+                                let val = parse_bracket_string(iter);
+                                params.push((key, val));
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(Token::String(_)) => {
+                        // item after pipe
+                        let item = parse_string(iter);
+                        match iter.peek() {
+                            Some(Token::Arrow) => {
+                                iter.next();
+                                let dest = parse_bracket_string(iter);
+                                mappings.push((item, dest));
+                            }
+                            _ => {
+                                items.push(item);
+                            }
+                        }
+                    }
+                    Some(Token::LBracket) => {
+                        let val = parse_bracket_string(iter);
+                        params.push((String::new(), val));
+                    }
+                    _ => break,
+                }
+            }
+            Some(Token::QuestionEq) => {
+                iter.next();
+                let val = parse_bracket_string(iter);
+                params.push((String::new(), val));
+            }
+            Some(Token::RBrace) => break,
+            Some(Token::And) => break,
+            Some(Token::Identifier(k)) => {
+                let key = k.clone();
+                if key == "vibi.tool" { break; }
+                iter.next();
+                if matches!(iter.peek(), Some(Token::Colon)) {
+                    iter.next();
+                    let val = parse_string(iter);
+                    content_blocks.push((key, val));
+                } else {
+                    // It's an action like file.save()
+                    break;
+                }
+            }
+            Some(Token::String(_)) => {
+                let item = parse_string(iter);
+                match iter.peek() {
+                    Some(Token::Arrow) => {
+                        iter.next();
+                        let dest = parse_bracket_string(iter);
+                        mappings.push((item, dest));
+                    }
+                    Some(Token::Pipe) => {
+                        let _pipe = iter.next();
+                        if let Some(Token::Identifier(key)) = iter.peek() {
+                            let key = key.clone();
+                            iter.next();
+                            if matches!(iter.peek(), Some(Token::QuestionEq) | Some(Token::Colon)) {
+                                iter.next();
+                                let val = parse_bracket_string(iter);
+                                params.push((key, val));
+                            }
+                        }
+                    }
+                    _ => {
+                        items.push(item);
                     }
                 }
-                break;
             }
-            Token::Semicolon => {
-                // End of condition header: if {left}={right};
-                break;
-            }
-            _ => {
-                // Collect condition tokens
-                left = format!("{}", token_to_string(token));
-            }
+            _ => break,
         }
     }
     
-    // Parse body inside { }
-    while let Some(token) = iter.next() {
-        match token {
-            Token::ToolCallOpen { tool, params } => {
-                let job = Job {
-                    tool: params_to_tool(tool, params),
-                    conditions: Vec::new(),
-                };
-                if in_else { else_body.push(job); } else { body.push(job); }
+    // Skip action like file.save()
+    loop {
+        match iter.peek() {
+            Some(Token::Identifier(_)) | Some(Token::Dot) | Some(Token::LParen) => {
+                iter.next();
             }
-            Token::Else => in_else = true,
-            Token::BlockClose => break,
-            Token::Eof => break,
-            _ => {}
+            Some(Token::RParen) => {
+                iter.next();
+                break;
+            }
+            _ => break,
         }
     }
     
-    Some(Condition {
-        left,
-        operator,
-        right,
-        body,
-        else_body,
+    Some(Job {
+        tool_name,
+        params,
+        items,
+        mappings,
+        content_blocks,
     })
 }
 
-fn token_to_string(token: &Token) -> String {
-    match token {
-        Token::Variable(name) => name.clone(),
-        _ => format!("{:?}", token),
+fn jobs_to_commands(jobs: &[Job]) -> Vec<Command> {
+    let mut commands = Vec::new();
+    eprintln!("jobs_to_commands: {} jobs", jobs.len());
+    for job in jobs {
+        eprintln!("  tool={}, items={:?}, params={:?}, content={:?}, mappings={:?}",
+            job.tool_name, job.items, job.params, job.content_blocks, job.mappings);        let path = job.params.iter()
+            .find(|(k, _)| k == "path")
+            .map(|(_, v)| v.clone());
+        
+        let dir = job.params.iter()
+            .find(|(k, _)| k == "dir")
+            .map(|(_, v)| v.clone());
+        
+        match job.tool_name.as_str() {
+            "create.file" => {
+                for item in &job.items {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::CreateFile,
+                        Some(resolve_path(item, &path)),
+                        None,
+                    ));
+                }
+            }
+            "edit.file" => {
+                let file_name = job.items.first().cloned().or_else(|| {
+                    job.params.iter()
+                        .find(|(k, _)| k.is_empty())
+                        .map(|(_, v)| v.clone())
+                }).unwrap_or_default();
+                let full_path = resolve_path(&file_name, &path);
+                let content = job.content_blocks.iter()
+                    .find(|(k, _)| k == "full.file.content")
+                    .map(|(_, v)| v.clone());
+                let search = job.content_blocks.iter()
+                    .find(|(k, _)| k == "search.file.content")
+                    .map(|(_, v)| v.clone());
+                let replace = job.content_blocks.iter()
+                    .find(|(k, _)| k == "replace.file.content")
+                    .map(|(_, v)| v.clone());
+                
+                if let Some(ct) = content {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::EditFile,
+                        Some(full_path),
+                        Some(ct),
+                    ));
+                } else if let (Some(s), Some(r)) = (search, replace) {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::EditFile,
+                        Some(full_path),
+                        Some(format!("SEARCH:{}|REPLACE:{}", s, r)),
+                    ));
+                }
+            }
+            "delete.file" => {
+                for item in &job.items {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::DeleteFile,
+                        Some(resolve_path(item, &path)),
+                        None,
+                    ));
+                }
+            }
+            "run.command" => {
+                for item in &job.items {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::RunShell,
+                        dir.clone(),
+                        Some(item.clone()),
+                    ));
+                }
+            }
+            "rename.file" => {
+                for (old, new) in &job.mappings {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::RenameFile,
+                        Some(resolve_path(old, &path)),
+                        Some(new.clone()),
+                    ));
+                }
+            }
+            "rename.folder" => {
+                let old_dir = job.items.first().cloned().unwrap_or_default();
+                let new_dir = job.mappings.first().map(|(_, v)| v.clone()).unwrap_or_default();
+                commands.push(Command::new(
+                    crate::types::CommandKind::RenameFolder,
+                    Some(old_dir),
+                    Some(new_dir),
+                ));
+            }
+            "create.directory" => {
+                let dir_path = path.or_else(|| {
+                    job.params.iter()
+                        .find(|(k, _)| k.is_empty())
+                        .map(|(_, v)| v.clone())
+                });
+                if let Some(p) = dir_path {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::CreateFolder,
+                        Some(p),
+                        None,
+                    ));
+                }
+                for item in &job.items {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::CreateFolder,
+                        Some(item.clone()),
+                        None,
+                    ));
+                }
+            }
+            "download.repository" => {
+                let url = job.items.first().cloned().or_else(|| {
+                    job.params.iter()
+                        .find(|(k, _)| k.is_empty())
+                        .map(|(_, v)| v.clone())
+                }).unwrap_or_default();
+                commands.push(Command::new(
+                    crate::types::CommandKind::DownloadRepo,
+                    path.clone(),
+                    Some(url),
+                ));
+            }
+            "download.private.repository" => {
+                let url = job.items.first().cloned().or_else(|| {
+                    job.params.iter()
+                        .find(|(k, _)| k.is_empty())
+                        .map(|(_, v)| v.clone())
+                }).unwrap_or_default();
+                let token = job.params.iter()
+                    .find(|(k, _)| k == "git token" || k == "git.token")
+                    .map(|(_, v)| v.clone());
+                commands.push(Command::new(
+                    crate::types::CommandKind::DownloadPrivateRepo,
+                    path.clone(),
+                    Some(format!("{}|TOKEN:{}", url, token.unwrap_or_default())),
+                ));
+            }
+            "open.folder" => {
+                for item in &job.items {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::OpenFolder,
+                        Some(item.clone()),
+                        None,
+                    ));
+                }
+            }
+            "open.app" => {
+                for item in &job.items {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::OpenApp,
+                        None,
+                        Some(item.clone()),
+                    ));
+                }
+            }
+            "move.file" => {
+                for (old, new) in &job.mappings {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::MoveFile,
+                        Some(resolve_path(old, &path)),
+                        Some(new.clone()),
+                    ));
+                }
+            }
+            "copy.file" => {
+                for (old, new) in &job.mappings {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::CopyFile,
+                        Some(resolve_path(old, &path)),
+                        Some(new.clone()),
+                    ));
+                }
+            }
+            "read.file" => {
+                for item in &job.items {
+                    commands.push(Command::new(
+                        crate::types::CommandKind::ReadFile,
+                        Some(resolve_path(item, &path)),
+                        None,
+                    ));
+                }
+            }
+            "path.tree" => {
+                let exclude = job.params.iter()
+                    .find(|(k, _)| k == "exclude.folders")
+                    .map(|(_, v)| v.clone());
+                commands.push(Command::new(
+                    crate::types::CommandKind::PathTree,
+                    path.clone(),
+                    exclude,
+                ));
+            }
+            _ => {}
+        }
+    }
+    commands
+}
+
+fn resolve_path(name: &str, path: &Option<String>) -> String {
+    match path {
+        Some(p) if !p.is_empty() => format!("{}/{}", p.trim_end_matches('/'), name),
+        _ => name.to_string(),
     }
 }

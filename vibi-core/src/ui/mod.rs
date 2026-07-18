@@ -1,5 +1,5 @@
 pub mod sidebar;
-pub mod chat;
+pub mod dashboard;
 pub mod agentic;
 pub mod dialog;
 pub mod logs;
@@ -15,7 +15,7 @@ use gtk::{Application, ApplicationWindow, Box as GtkBox, Orientation, Align, But
 use std::rc::Rc;
 use std::cell::RefCell;
 
-pub fn refresh_sidebar_chat_list(container: &GtkBox, store: &crate::chat_store::ChatStore, stack: &Stack, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, clear_handle: crate::ui::chat::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) {
+pub fn refresh_sidebar_chat_list(container: &GtkBox, store: &crate::chat_store::ChatStore, stack: &Stack, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, clear_handle: crate::ui::dashboard::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) {
     let children = container.children();
     for child in &children {
         container.remove(child);
@@ -90,7 +90,7 @@ fn show_rename_dialog(item: &Button) {
     });
 }
 
-fn show_delete_confirm(row: &GtkBox, container: &GtkBox, chat_id: String, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, stack: Stack, clear_handle: crate::ui::chat::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) {
+fn show_delete_confirm(row: &GtkBox, container: &GtkBox, chat_id: String, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, stack: Stack, clear_handle: crate::ui::dashboard::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) {
     let row_clone = row.clone();
     let container_clone = container.clone();
     let store_clone = chat_store.clone();
@@ -189,7 +189,7 @@ pub fn build_window(app: &Application) {
 
     let refresh_chats_cell: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
     let refresh_chats_placeholder = refresh_chats_cell.clone();
-    let (chat_view, preview_panel, clear_handle) = chat::build_chat_view(chat_store.clone(), logger.clone(), ai_notebook.clone(), Box::new(move || {
+    let (chat_view, preview_panel, clear_handle) = dashboard::build_chat_view(chat_store.clone(), logger.clone(), ai_notebook.clone(), Box::new(move || {
         if let Some(ref f) = *refresh_chats_placeholder.borrow() { f(); }
     }), Box::new(title_updater), Box::new(reset_chat_title));
 

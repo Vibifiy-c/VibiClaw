@@ -1,150 +1,196 @@
 use gtk::prelude::*;
-use gtk::{Box as GtkBox, Label, Orientation, Align, ScrolledWindow, PolicyType, Separator};
-use pulldown_cmark::{Parser, Event, Tag, TagEnd, HeadingLevel, CodeBlockKind};
+use gtk::{Box as GtkBox, Button, Label, Orientation, Align, Stack};
+use std::rc::Rc;
+use std::cell::RefCell;
+use crate::api::api_chat::ApiChat;
+use crate::chat_store::ChatStore;
 
-pub fn render_markdown(markdown: &str) -> GtkBox {
-    let container = GtkBox::new(Orientation::Vertical, 4);
-    container.set_hexpand(true);
-    
-    let parser = Parser::new(markdown);
-    let mut in_code_block = false;
-    let mut code_buffer = String::new();
-    let mut code_language = String::new();
-    let mut in_paragraph = false;
-    let mut paragraph_text = String::new();
-    
-    for event in parser {
-        match event {
-            Event::Start(tag) => {
-                match tag {
-                    Tag::Heading { level, .. } => {
-                        finish_paragraph(&mut paragraph_text, &mut in_paragraph, &container);
-                    }
-                    Tag::CodeBlock(kind) => {
-                        finish_paragraph(&mut paragraph_text, &mut in_paragraph, &container);
-                        in_code_block = true;
-                        code_buffer.clear();
-                        code_language = match kind {
-                            CodeBlockKind::Fenced(lang) => lang.to_string(),
-                            _ => String::new(),
-                        };
-                    }
-                    Tag::Paragraph => {
-                        in_paragraph = true;
-                        paragraph_text.clear();
-                    }
-                    _ => {}
-                }
-            }
-            Event::End(tag) => {
-                match tag {
-                    TagEnd::Heading(level) => {
-                        let label = Label::new(None);
-                        let size = match level {
-                            HeadingLevel::H1 => 24,
-                            HeadingLevel::H2 => 20,
-                            HeadingLevel::H3 => 18,
-                            HeadingLevel::H4 => 16,
-                            _ => 14,
-                        };
-                        label.set_markup(&format!(
-                            "<span font_weight=\"bold\" size=\"{}\">{}</span>",
-                            size * 1000,
-                            glib::markup_escape_text(&paragraph_text)
-                        ));
-                        label.set_halign(Align::Start);
-                        label.set_wrap(true);
-                        label.set_margin_top(8);
-                        label.set_margin_bottom(4);
-                        container.pack_start(&label, false, false, 0);
-                        paragraph_text.clear();
-                    }
-                    TagEnd::CodeBlock => {
-                        in_code_block = false;
-                        let code_view = create_code_block(&code_buffer, &code_language);
-                        container.pack_start(&code_view, false, false, 0);
-                        code_buffer.clear();
-                    }
-                    TagEnd::Paragraph => {
-                        finish_paragraph(&mut paragraph_text, &mut in_paragraph, &container);
-                    }
-                    _ => {}
-                }
-            }
-            Event::Text(text) => {
-                if in_code_block {
-                    code_buffer.push_str(&text);
-                } else {
-                    paragraph_text.push_str(&text);
-                }
-            }
-            Event::Code(code) => {
-                paragraph_text.push_str(&format!("<tt>{}</tt>", glib::markup_escape_text(&code)));
-            }
-            Event::SoftBreak => {
-                paragraph_text.push(' ');
-            }
-            Event::HardBreak => {
-                paragraph_text.push('\n');
-            }
-            _ => {}
-        }
-    }
-    
-    finish_paragraph(&mut paragraph_text, &mut in_paragraph, &container);
-    container
-}
-
-fn finish_paragraph(text: &mut String, in_para: &mut bool, container: &GtkBox) {
-    if *in_para && !text.is_empty() {
-        let label = Label::new(None);
-        label.set_markup(&glib::markup_escape_text(text));
-        label.set_halign(Align::Start);
-        label.set_wrap(true);
-        label.set_margin_bottom(2);
-        container.pack_start(&label, false, false, 0);
-        text.clear();
-        *in_para = false;
-    }
-}
-
-fn create_code_block(code: &str, _language: &str) -> GtkBox {
+pub fn build_chat_renderer(
+    view_stack: Stack,
+    chat_title: Label,
+    api_chat: Option<Rc<ApiChat>>,
+    logger: Rc<RefCell<crate::logger::Logger>>,
+    chat_store: Rc<RefCell<ChatStore>>,
+    ai_bridge: Rc<crate::ai_bridge::AiBridge>,
+) -> (GtkBox, Rc<RefCell<String>>) {
     let container = GtkBox::new(Orientation::Vertical, 0);
-    container.style_context().add_class("code-block");
-    container.set_margin_top(8);
-    container.set_margin_bottom(8);
-    
-    let header = GtkBox::new(Orientation::Horizontal, 0);
-    header.style_context().add_class("code-block-header");
-    header.set_margin_start(8);
-    header.set_margin_end(8);
-    header.set_margin_top(4);
-    header.set_margin_bottom(4);
-    
-    let lang_label = Label::new(Some(if _language.is_empty() { "Code" } else { _language }));
-    lang_label.style_context().add_class("code-block-lang");
-    lang_label.set_halign(Align::Start);
-    header.pack_start(&lang_label, true, true, 0);
-    
-    container.pack_start(&header, false, false, 0);
-    container.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
-    
-    let scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
-    scroll.set_policy(PolicyType::Automatic, PolicyType::Automatic);
-    scroll.set_max_content_height(300);
-    
-    let code_label = Label::new(Some(code));
-    code_label.set_halign(Align::Start);
-    code_label.set_wrap(false);
-    code_label.set_margin_start(12);
-    code_label.set_margin_end(12);
-    code_label.set_margin_top(8);
-    code_label.set_margin_bottom(8);
-    code_label.set_selectable(true);
-    code_label.style_context().add_class("code-block-text");
-    
-    scroll.add(&code_label);
-    container.pack_start(&scroll, false, false, 0);
-    
+    container.set_hexpand(true);
+    container.set_vexpand(true);
+
+    let inner_stack = Stack::new();
+    inner_stack.set_hexpand(true);
+    inner_stack.set_vexpand(true);
+
+    // Native chat page
+    let native_chat = build_native_chat(api_chat, logger, chat_store);
+    inner_stack.add_titled(&native_chat, "native", "Native");
+
+    // Webview page
+    let webview_page = GtkBox::new(Orientation::Vertical, 0);
+    inner_stack.add_titled(&webview_page, "webview", "WebView");
+
+    // Back button
+    let back_btn = Button::with_label("← Back to Dashboard");
+    back_btn.style_context().add_class("floating-back-btn");
+    back_btn.set_halign(Align::Start);
+    back_btn.set_margin_start(16);
+    back_btn.set_margin_top(8);
+
+    let stack_back = view_stack.clone();
+    let title_back = chat_title.clone();
+    back_btn.connect_clicked(move |_| {
+        stack_back.set_visible_child_name("dashboard");
+        title_back.set_text("VibiClaw");
+    });
+
+    container.pack_start(&back_btn, false, false, 0);
+    container.pack_start(&inner_stack, true, true, 0);
+
+    webview_page.pack_start(&ai_bridge.webview, true, true, 0);
+
+    let current_mode: Rc<RefCell<String>> = Rc::new(RefCell::new(String::from("webview")));
+
+    let inner_clone = inner_stack.clone();
+    let mode_clone = current_mode.clone();
+    let update_visible = move || {
+        let mode = mode_clone.borrow().clone();
+        inner_clone.set_visible_child_name(if mode == "webview" { "webview" } else { "native" });
+    };
+    update_visible();
+
+    let mode_for_return = current_mode.clone();
+    container.connect_map(move |_| {
+        let mode = mode_for_return.borrow().clone();
+        inner_stack.set_visible_child_name(if mode == "webview" { "webview" } else { "native" });
+    });
+
+    (container, current_mode)
+}
+
+fn build_native_chat(
+    api_chat: Option<Rc<ApiChat>>,
+    logger: Rc<RefCell<crate::logger::Logger>>,
+    _chat_store: Rc<RefCell<ChatStore>>,
+) -> GtkBox {
+    let container = GtkBox::new(Orientation::Vertical, 0);
+    container.set_hexpand(true);
+    container.set_vexpand(true);
+
+    let scroll = gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+    scroll.set_vexpand(true);
+    scroll.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+
+    let message_area = GtkBox::new(Orientation::Vertical, 8);
+    message_area.set_vexpand(true);
+    message_area.set_valign(Align::Start);
+    message_area.set_margin_start(24);
+    message_area.set_margin_end(24);
+    message_area.set_margin_top(16);
+    message_area.set_margin_bottom(16);
+    scroll.add(&message_area);
+    container.pack_start(&scroll, true, true, 0);
+
+    let input_area = GtkBox::new(Orientation::Horizontal, 8);
+    input_area.set_margin_start(24);
+    input_area.set_margin_end(24);
+    input_area.set_margin_bottom(16);
+    input_area.style_context().add_class("input-box");
+
+    let entry = gtk::Entry::new();
+    entry.set_placeholder_text(Some("Type your message..."));
+    entry.style_context().add_class("chat-entry");
+    entry.set_hexpand(true);
+    input_area.pack_start(&entry, true, true, 0);
+
+    let send_btn = Button::with_label("➤");
+    send_btn.style_context().add_class("send-btn");
+    input_area.pack_start(&send_btn, false, false, 0);
+
+    container.pack_start(&input_area, false, false, 0);
+
+    if let Some(ref api) = api_chat {
+        let api = api.clone();
+        let msg_area = message_area.clone();
+        let entry_clone = entry.clone();
+        let logger = logger.clone();
+        let scroll_clone = scroll.clone();
+
+        send_btn.connect_clicked(move |_| {
+            let text = entry_clone.text().to_string();
+            if text.trim().is_empty() { return; }
+
+            let user_row = GtkBox::new(Orientation::Horizontal, 0);
+            user_row.set_halign(Align::End);
+            user_row.set_margin_bottom(4);
+            let user_bubble = Label::new(Some(&text));
+            user_bubble.set_wrap(true);
+            user_bubble.set_max_width_chars(50);
+            user_bubble.style_context().add_class("user-bubble");
+            user_row.pack_start(&user_bubble, false, false, 0);
+            msg_area.pack_start(&user_row, false, false, 0);
+            user_row.show_all();
+            entry_clone.set_text("");
+
+            let api_clone = api.clone();
+            let msg_clone = msg_area.clone();
+            let msg_clone2 = msg_area.clone();
+            let logger_clone = logger.clone();
+            let scroll2 = scroll_clone.clone();
+            let scroll3 = scroll.clone();
+            let text_clone = text.clone();
+
+            gtk::glib::spawn_future_local(async move {
+                let result = api_clone.send_message(&text_clone);
+                gtk::glib::idle_add_local(move || {
+                    match &result {
+                        Ok(response) => {
+                            logger_clone.borrow_mut().log(
+                                crate::logger::LogLevel::Info, "API",
+                                &format!("Response: {} tokens", response.tokens_used),
+                            );
+                            let vibi_results = ApiChat::execute_vibi_blocks(&response.content);
+                            let content = response.content.clone();
+                            let ai_row = GtkBox::new(Orientation::Horizontal, 0);
+                            ai_row.set_halign(Align::Start);
+                            ai_row.set_margin_bottom(4);
+                            let ai_bubble = Label::new(Some(&content));
+                            ai_bubble.set_wrap(true);
+                            ai_bubble.set_max_width_chars(50);
+                            ai_bubble.style_context().add_class("ai-bubble");
+                            ai_row.pack_start(&ai_bubble, false, false, 0);
+                            msg_clone2.pack_start(&ai_row, false, false, 0);
+                            ai_row.show_all();
+                            for r in &vibi_results {
+                                let r_row = GtkBox::new(Orientation::Horizontal, 0);
+                                r_row.set_halign(Align::Start);
+                                let r_label = Label::new(Some(r));
+                                r_label.style_context().add_class("vibi-result");
+                                r_row.pack_start(&r_label, false, false, 0);
+                                msg_clone2.pack_start(&r_row, false, false, 0);
+                                r_row.show_all();
+                            }
+                            let adj = scroll3.vadjustment();
+                            adj.set_value(adj.upper());
+                        }
+                        Err(e) => {
+                            let err_label = Label::new(Some(&format!("Error: {}", e)));
+                            err_label.style_context().add_class("vibi-error");
+                            msg_clone.pack_start(&err_label, false, false, 0);
+                            err_label.show_all();
+                        }
+                    }
+                    let adj = scroll2.vadjustment();
+                    adj.set_value(adj.upper());
+                    gtk::glib::ControlFlow::Break
+                });
+            });
+        });
+
+        entry.connect_activate({
+            let btn = send_btn.clone();
+            move |_| btn.emit_clicked()
+        });
+    }
+
     container
 }

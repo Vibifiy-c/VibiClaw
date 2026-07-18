@@ -17,22 +17,6 @@ pub struct ChatMessage {
 }
 
 impl ChatSession {
-    pub fn new(id: String, first_message: &str, model: &str) -> Self {
-        let title = generate_title(first_message);
-        ChatSession {
-            id,
-            title,
-            model: model.to_string(),
-            messages: Vec::new(),
-        }
-    }
-
-    pub fn add_message(&mut self, role: &str, content: &str) {
-        self.messages.push(ChatMessage {
-            role: role.to_string(),
-            content: content.to_string(),
-        });
-    }
 }
 
 pub struct ChatStore {
@@ -67,22 +51,13 @@ impl ChatStore {
         }
     }
 
-    pub fn create_chat(&mut self, first_message: &str, model: &str) -> &ChatSession {
-        let id = format!("chat_{}", chrono::Utc::now().timestamp_millis());
-        let chat = ChatSession::new(id.clone(), first_message, model);
-        self.chats.insert(0, chat);
-        self.active_id = Some(id.clone());
-        self.save();
-        self.chats.first().unwrap()
-    }
+
 
     pub fn get_active(&self) -> Option<&ChatSession> {
         self.active_id.as_ref().and_then(|id| self.chats.iter().find(|c| &c.id == id))
     }
 
-    pub fn get_active_mut(&mut self) -> Option<&mut ChatSession> {
-        self.active_id.as_ref().and_then(|id| self.chats.iter_mut().find(|c| &c.id == id))
-    }
+
 
     pub fn set_active(&mut self, id: &str) {
         if id.is_empty() {
@@ -96,12 +71,8 @@ impl ChatStore {
         &self.chats
     }
 
-    pub fn add_message_to_active(&mut self, role: &str, content: &str) {
-        if let Some(chat) = self.get_active_mut() {
-            chat.add_message(role, content);
-            self.save();
-        }
-    }
+
+
 
     pub fn delete_chat(&mut self, id: &str) {
         self.chats.retain(|c| c.id != id);
@@ -111,20 +82,9 @@ impl ChatStore {
         self.save();
     }
 
-    pub fn load_chat_messages(&self, id: &str) -> Option<Vec<ChatMessage>> {
-        self.chats.iter().find(|c| c.id == id).map(|c| c.messages.clone())
-    }
 }
 
-fn generate_title(text: &str) -> String {
-    let cleaned = text.trim();
-    if cleaned.len() <= 40 {
-        cleaned.to_string()
-    } else {
-        let end = cleaned[..40].rfind(' ').unwrap_or(40);
-        format!("{}...", &cleaned[..end])
-    }
-}
+
 
 fn chats_path() -> PathBuf {
     let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));

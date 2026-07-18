@@ -1,5 +1,5 @@
 use gtk::prelude::*;
-use gtk::{Box as GtkBox, Label, Orientation, Button, Entry, Separator};
+use gtk::{Box as GtkBox, Orientation, Button, Entry};
 use webkit2gtk::{WebView, WebViewExt};
 
 pub fn build_browser_view() -> GtkBox {

@@ -10,6 +10,16 @@ pub enum CommandKind {
     DeleteFolder,
     RunShell,
     InstallDep,
+    ReadFile,
+    MoveFile,
+    CopyFile,
+    RenameFile,
+    RenameFolder,
+    OpenFolder,
+    OpenApp,
+    DownloadRepo,
+    DownloadPrivateRepo,
+    PathTree,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

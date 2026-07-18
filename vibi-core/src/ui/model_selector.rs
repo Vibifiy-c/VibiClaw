@@ -1,5 +1,5 @@
 use gtk::prelude::*;
-use gtk::{Box as GtkBox, Button, Label, Orientation, Align, ScrolledWindow, PolicyType, Window, WindowType, Overlay, Revealer};
+use gtk::{Box as GtkBox, Button, Label, Orientation, Align, ScrolledWindow, PolicyType, Window, Overlay, Revealer};
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -54,7 +54,6 @@ pub fn build_model_selector() -> ModelSelector {
     let sel_label = selected_label.clone();
     let sel_icon = selected_icon.clone();
     let on_change = on_model_changed.clone();
-    let trigger_weak = trigger.clone();
     
     trigger.connect_clicked(move |btn| {
         if let Some(window) = btn.toplevel().and_then(|w| w.downcast::<Window>().ok()) {
@@ -256,7 +255,7 @@ fn show_model_popup(
 
 fn build_company_column(
     company: &CompanyGroup,
-    current_model: &str,
+    _current_model: &str,
     selected_model: Rc<RefCell<String>>,
     selected_label: Rc<RefCell<Label>>,
     selected_icon: Rc<RefCell<Label>>,

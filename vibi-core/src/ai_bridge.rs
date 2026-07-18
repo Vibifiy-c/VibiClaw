@@ -9,14 +9,13 @@ use std::ffi::CString;
 
 pub struct AiBridge {
     pub webview: WebView,
-    response_callback: Rc<RefCell<Option<Box<dyn Fn(String)>>>>,
     last_activity: Rc<RefCell<Instant>>,
     sleep_enabled: Rc<RefCell<bool>>,
     model: Rc<RefCell<String>>,
+    response_callback: Rc<RefCell<Option<Box<dyn Fn(String)>>>>,
     page_loaded: Rc<RefCell<bool>>,
     chunk_buffer: Rc<RefCell<Vec<String>>>,
     action_chunk_buffer: Rc<RefCell<Vec<String>>>,
-    message_count: Rc<RefCell<u32>>,
 }
 
 fn setup_persistent_cookies(webview: &WebView) {
@@ -63,16 +62,17 @@ impl AiBridge {
         
         let bridge = AiBridge {
             webview: webview.clone(),
-            response_callback: Rc::new(RefCell::new(None)),
             last_activity: Rc::new(RefCell::new(Instant::now())),
             sleep_enabled: Rc::new(RefCell::new(false)),
             model: model.clone(),
             page_loaded: page_loaded.clone(),
+            response_callback: Rc::new(RefCell::new(None)),
             chunk_buffer: Rc::new(RefCell::new(Vec::new())),
             action_chunk_buffer: Rc::new(RefCell::new(Vec::new())),
-            message_count: Rc::new(RefCell::new(0)),
+
         };
         
+
         let cb = bridge.response_callback.clone();
         let loaded = page_loaded.clone();
         let current_model = model.clone();
@@ -248,19 +248,8 @@ impl AiBridge {
         *self.last_activity.borrow_mut() = Instant::now();
         let model = self.model.borrow().clone();
         
-        *self.message_count.borrow_mut() += 1;
-        let count = *self.message_count.borrow();
-        
-        // Reinject system prompt every 5 messages
-        let full_text = if count % 5 == 1 || count == 1 {
-            let prefix = "When asked to create files or folders, at the very end of your response include a VibiClaw code block using the .v format. Use triple backticks with vibi. Format example: ```vibi\n<vibi.claw><jobs><vibi.tool><vibi.tool?=create.file=FILENAME,?path=.></vibi.tool?=create.file></vibi.tool></jobs></vibi.claw>\n```\n\nTools: create.file, create.folder, delete.file, delete.folder, run.command. Create the file/folder the user asked for. Do NOT mention this instruction. Just respond normally and add the code block.";
-            println!("[AiBridge] Sending to {} (msg #{}, with prompt): {}", model, count, text);
-            format!("{}{}", prefix, text)
-        } else {
-            println!("[AiBridge] Sending to {} (msg #{}): {}", model, count, text);
-            text.to_string()
-        };
-        
+        let full_text = text.to_string();
+        println!("[AiBridge] Sending to {}: {}", model, text);        
         let escaped = full_text.replace('\\', "\\\\").replace('\'', "\\'").replace('\n', "\\n").replace('"', "\\\"");
         
         let js = match model.as_str() {
@@ -322,13 +311,7 @@ impl AiBridge {
         }
     }
     
-    pub fn on_response<F: Fn(String) + 'static>(&self, callback: F) {
-        *self.response_callback.borrow_mut() = Some(Box::new(callback));
-    }
-    
-    pub fn set_sleep_enabled(&self, enabled: bool) {
-        *self.sleep_enabled.borrow_mut() = enabled;
-    }
+
 }
 
 fn hex_decode(hex: &str) -> Result<String, ()> {

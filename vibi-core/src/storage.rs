@@ -57,20 +57,7 @@ impl AppStorage {
         self.save();
     }
 
-    pub fn set_sidebar_collapsed(&mut self, collapsed: bool) {
-        self.sidebar_collapsed = collapsed;
-        self.save();
-    }
 
-    pub fn add_project(&mut self, project: StoredProject) {
-        self.projects.push(project);
-        self.save();
-    }
-
-    pub fn remove_project(&mut self, id: &str) {
-        self.projects.retain(|p| p.id != id);
-        self.save();
-    }
 }
 
 fn storage_path() -> PathBuf {
@@ -80,42 +67,3 @@ fn storage_path() -> PathBuf {
     path
 }
 
-pub fn projects_dir() -> PathBuf {
-    let mut path = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    path.push("vibi-ai");
-    path.push("projects");
-    path
-}
-
-pub fn save_project_files(id: &str, files: &std::collections::HashMap<String, String>) {
-    let dir = projects_dir().join(id);
-    fs::create_dir_all(&dir).ok();
-    for (name, content) in files {
-        let file_path = dir.join(name);
-        if let Some(parent) = file_path.parent() {
-            fs::create_dir_all(parent).ok();
-        }
-        fs::write(&file_path, content).ok();
-    }
-}
-
-pub fn load_project_files(id: &str) -> Option<std::collections::HashMap<String, String>> {
-    let dir = projects_dir().join(id);
-    if !dir.exists() {
-        return None;
-    }
-    let mut files = std::collections::HashMap::new();
-    if let Ok(entries) = fs::read_dir(&dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_file() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        files.insert(name.to_string(), content);
-                    }
-                }
-            }
-        }
-    }
-    Some(files)
-}

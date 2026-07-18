@@ -1,17 +1,27 @@
-<vibi.claw>
-  <jobs>
-    <vibi.tool>
-      <vibi.tool?=create.folder="chatgpt's test  ",?path=".">
-      </vibi.tool?=create.folder>
+main vibi.claw
+import vibi.tools;
 
-      <vibi.tool?=create.file="chatgpt.gpt",?path="./chatgpt's test  ">
-      </vibi.tool?=create.file>
-
-      <vibi.tool?=create.file="chatgptresults.rv",?path="./chatgpt's test  ">
-      </vibi.tool?=create.file>
-
-      <vibi.tool?=create.file="chatgpt.session.data",?path="./chatgpt's test  ">
-      </vibi.tool?=create.file>
-    </vibi.tool>
-  </jobs>
-</vibi.claw>
+{
+  jobs
+  {
+    vibi.tool = [create.directory]?= ["./test_output"]
+    create.directory()
+  }
+  {
+    vibi.tool = [create.file] | path?= ["./test_output"]
+    "hello.txt"
+    "readme.md"
+  }
+  {
+    vibi.tool = [edit.file]?= "hello.txt" | path?= ["./test_output"]
+    full.file.content:
+    "Hello from VibiClaw v2!"
+    file.save()
+  }
+  {
+    vibi.tool = [run.command] | path? = ["./test_output"]
+    "ls -la"
+    "pwd"
+  }
+  jobs()
+}
