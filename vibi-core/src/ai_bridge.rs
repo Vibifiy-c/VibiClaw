@@ -94,12 +94,7 @@ impl AiBridge {
                     
                     let js = match model_str.as_str() {
                         "chatgpt" => include_str!("agentic_detection/chatgpt.js"),
-                        "claude" => include_str!("agentic_detection/claude.js"),
                         "gemini" => include_str!("agentic_detection/gemini.js"),
-                        "deepseek" => include_str!("agentic_detection/deepseek.js"),
-                        "grok" => include_str!("agentic_detection/grok.js"),
-                        "qwen" => include_str!("agentic_detection/qwen.js"),
-                        "kimi" => include_str!("agentic_detection/kimi.js"),
                         _ => include_str!("agentic_detection/chatgpt.js"),
                     };
                     webview.run_javascript(js, None::<&gio::Cancellable>, |_| {});
@@ -113,9 +108,10 @@ impl AiBridge {
         let action_buf = bridge.action_chunk_buffer.clone();
         let last_activity_uri = bridge.last_activity.clone();
         webview.connect_uri_notify(move |wv| {
-            *last_activity_uri.borrow_mut() = Instant::now(); // Any URI change = activity
+            *last_activity_uri.borrow_mut() = Instant::now();
             if let Some(uri) = wv.uri() {
                 let uri_str = uri.to_string();
+                println!("[AiBridge] URI changed: {}", uri_str);
                 if let Some(title) = wv.title() {
                     if title.starts_with("vibi-") {
                         println!("[AiBridge] Title: {}", title);
@@ -231,12 +227,7 @@ impl AiBridge {
         
         let url = match new_model {
             "chatgpt" => "https://chat.openai.com",
-            "claude" => "https://claude.ai",
             "gemini" => "https://gemini.google.com",
-            "deepseek" => "https://chat.deepseek.com",
-            "grok" => "https://grok.com",
-            "qwen" => "https://tongyi.aliyun.com/qianwen",
-            "kimi" => "https://www.kimi.com",
             _ => "https://chat.openai.com",
         };
         
@@ -261,10 +252,6 @@ impl AiBridge {
                 "window.__vibi_send && window.__vibi_send('{}');",
                 escaped
             ),
-            "deepseek" => format!(
-                "(function() {{ var input = document.querySelector('textarea._27c9245') || document.querySelector('textarea'); if(input) {{ input.value = '{}'; input.dispatchEvent(new Event('input', {{ bubbles: true }})); var attempts = 0; var trySend = setInterval(function() {{ attempts++; var btn = document.querySelector('.ds-button--icon') || document.querySelector('[class*=\"ds-button\"]'); if(btn && !btn.disabled) {{ btn.click(); clearInterval(trySend); }} if(attempts > 20) clearInterval(trySend); }}, 300); }} }})()",
-                escaped
-            ),
             _ => format!(
                 "(function() {{ var input = document.querySelector('[contenteditable=\"true\"]') || document.querySelector('textarea'); if(input) {{ input.textContent = '{}'; input.dispatchEvent(new Event('input', {{ bubbles: true }})); setTimeout(function() {{ var btn = document.querySelector('button[type=\"submit\"]'); if(btn) btn.click(); }}, 800); }} }})()",
                 escaped
@@ -286,12 +273,7 @@ impl AiBridge {
             let model_str = self.model.borrow().clone();
             let url = match model_str.as_str() {
                 "chatgpt" => "https://chat.openai.com",
-                "claude" => "https://claude.ai",
                 "gemini" => "https://gemini.google.com",
-                "deepseek" => "https://chat.deepseek.com",
-                "grok" => "https://grok.com",
-                "qwen" => "https://tongyi.aliyun.com/qianwen",
-                "kimi" => "https://www.kimi.com",
                 _ => "https://chat.openai.com",
             };
             self.webview.load_uri(url);

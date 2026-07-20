@@ -240,11 +240,6 @@ fn build_webview_section(cards_registry: &Rc<RefCell<Vec<(String, Button)>>>, vi
     let models = vec![
         ("chatgpt", "🟢", "ChatGPT", "openai.com", "OpenAI"),
         ("gemini", "🔵", "Gemini", "gemini.google.com", "Google"),
-        ("claude", "🟠", "Claude", "claude.ai", "Anthropic"),
-        ("deepseek", "🐋", "DeepSeek", "chat.deepseek.com", "DeepSeek"),
-        ("grok", "⚡", "Grok", "grok.com", "xAI"),
-        ("qwen", "🟣", "Qwen", "tongyi.aliyun.com", "Alibaba"),
-        ("kimi", "🌙", "Kimi", "kimi.moonshot.cn", "MoonShot"),
     ];
 
     for (id, emoji, name, domain, company) in &models {
