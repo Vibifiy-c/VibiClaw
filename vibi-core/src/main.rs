@@ -74,11 +74,20 @@ fn main() {
 
 fn load_css() {
     let provider = CssProvider::new();
-    provider.load_from_data(include_str!("ui/style.css").as_bytes()).ok();
+    let css = include_str!("ui/style.css");
+    println!("[CSS] Loading {} bytes of CSS", css.len());
+    if let Err(e) = provider.load_from_data(css.as_bytes()) {
+        eprintln!("[CSS] Parse error: {:?}", e);
+    }
     
-    gtk::StyleContext::add_provider_for_screen(
-        &gdk::Screen::default().expect("Could not connect to display"),
-        &provider,
-        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-    );
+    if let Some(screen) = gdk::Screen::default() {
+        gtk::StyleContext::add_provider_for_screen(
+            &screen,
+            &provider,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
+        );
+        println!("[CSS] Provider added to screen");
+    } else {
+        eprintln!("[CSS] No default screen");
+    }
 }

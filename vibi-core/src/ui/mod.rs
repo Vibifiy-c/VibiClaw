@@ -6,6 +6,8 @@ pub mod logs;
 pub mod browser;
 pub mod settings;
 pub mod model_selector;
+pub mod notification_panel;
+pub mod approval_panel;
 pub mod ai_notebook;
 pub mod login_center;
 pub mod renderer;
@@ -154,7 +156,7 @@ pub fn build_window(app: &Application) {
     let chat_store = Rc::new(RefCell::new(crate::chat_store::ChatStore::load()));
     let root = GtkBox::new(Orientation::Horizontal, 0);
     let main_overlay = gtk::Overlay::new();
-    main_overlay.add_overlay(&root);
+    main_overlay.add(&root);
 
     let main_stack = Stack::new();
     main_stack.set_hexpand(true);
@@ -235,6 +237,16 @@ pub fn build_window(app: &Application) {
         .default_width(1280)
         .default_height(800)
         .build();
+
+    // Bell button fixed in top-right
+    let bell_btn = Button::with_label("🔔");
+    bell_btn.style_context().add_class("notification-bell-float");
+    bell_btn.set_halign(Align::End);
+    bell_btn.set_valign(Align::Start);
+    bell_btn.set_margin_top(8);
+    bell_btn.set_margin_end(12);
+    main_overlay.add_overlay(&bell_btn);
+
     window.add(&main_overlay);
 
     let saved_theme = storage.borrow().theme.clone();
@@ -247,24 +259,19 @@ pub fn build_window(app: &Application) {
     let logger_save = logger.clone();
     let window_save = window.clone();
     window.connect_delete_event(move |_, _| {
-        let save_screen = build_save_screen();
-        window_save.remove(&window_save.child().unwrap());
-        window_save.add(&save_screen);
-        window_save.show_all();
-        
         let logger = logger_save.clone();
-        let win = window_save.clone();
         logger.borrow().save_to_disk();
-        unsafe { win.destroy(); }
         false.into()
     });
 
     window.connect_key_press_event(move |w, k| {
         if k.keyval() == gdk::keys::constants::F11 {
-            if (w.window().unwrap().state() & gdk::WindowState::FULLSCREEN).is_empty() {
-                w.fullscreen();
-            } else {
-                w.unfullscreen();
+            if let Some(win) = w.window() {
+                if (win.state() & gdk::WindowState::FULLSCREEN).is_empty() {
+                    w.fullscreen();
+                } else {
+                    w.unfullscreen();
+                }
             }
         }
         false.into()

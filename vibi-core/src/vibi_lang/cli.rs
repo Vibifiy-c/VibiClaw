@@ -29,7 +29,7 @@ pub fn test_compile(source: &str) {
             
             match Executor::new(sandbox_path.to_str().unwrap(), true) {
                 Ok(executor) => {
-                    let results = crate::vibi_lang::runtime::execute(commands, &executor);
+                    let results = crate::vibi_lang::runtime::execute(commands, &executor, false);
                     for result in &results {
                         println!("  {}", result);
                     }

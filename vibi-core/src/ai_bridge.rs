@@ -117,9 +117,7 @@ impl AiBridge {
                         println!("[AiBridge] Title: {}", title);
                     }
                 }
-                if uri_str.contains("#vibi-") {
-                    println!("[AiBridge] URI: {}", uri_str);
-                }
+
                 if let Some(hash_pos) = uri_str.find("#vibi-action-") {
                     let payload = &uri_str[hash_pos + "#vibi-action-".len()..];
                     let payload = payload.split('&').next().unwrap_or(payload).split('?').next().unwrap_or(payload);
@@ -128,8 +126,13 @@ impl AiBridge {
                         let full_hex: String = action_buf.borrow().iter().map(|s| s.as_str()).collect();
                         action_buf.borrow_mut().clear();
                         let vibi_code = hex_to_string(&full_hex);
-                        println!("[VibiClaw] Detected action ({} chars):\n{}", vibi_code.len(), &vibi_code[..vibi_code.len().min(200)]);
+                        println!("[VibiClaw] Processing vibi code ({} chars)", vibi_code.len());
                         
+                        // Only process if it's valid VibiClaw code
+                        if !vibi_code.contains("main vibi.claw") {
+                            // Silently ignore non-vibi code blocks
+                            return;
+                        }
                         match crate::vibi_lang::compile(&vibi_code) {
                         Ok(commands) => {
                             println!("[VibiClaw] Compiled {} commands, executing...", commands.len());
@@ -142,7 +145,7 @@ impl AiBridge {
                                 sandbox_path.to_str().unwrap(), 
                                 true  // auto-execute
                             ) {
-                                let results = crate::vibi_lang::runtime::execute(commands, &executor);
+                                let results = crate::vibi_lang::runtime::execute(commands, &executor, true);
                                 for result in &results {
                                     println!("[VibiClaw] {}", result);
                                 }

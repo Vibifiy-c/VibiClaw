@@ -62,6 +62,8 @@ pub fn build_chat_view(
     chat_title.style_context().add_class("topbar-title");
     topbar.pack_start(&chat_title, false, false, 0);
 
+
+
     let divider = Separator::new(Orientation::Horizontal);
     divider.style_context().add_class("topbar-divider");
 

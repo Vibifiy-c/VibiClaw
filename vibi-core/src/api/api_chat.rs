@@ -94,7 +94,7 @@ impl ApiChat {
                         sandbox_path.to_str().unwrap(),
                         true,
                     ) {
-                        for result in crate::vibi_lang::runtime::execute(commands, &executor) {
+                        for result in crate::vibi_lang::runtime::execute(commands, &executor, true) {
                             results.push(result);
                         }
                     }

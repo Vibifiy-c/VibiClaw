@@ -295,3 +295,355 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 .light .dashboard-recent-title { color: #1a1523; }
 .light .dashboard-recent-model { color: #a09bb8; }
 .light .dashboard-empty-text { color: #a09bb8; }
+.notification-panel {
+    background: #1e1e1e;
+    border-left: 1px solid #3f3f3f;
+}
+
+.notification-header {
+    background: transparent;
+}
+
+.notification-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f0eeff;
+}
+
+.notification-clear-btn {
+    background: transparent;
+    border: 1px solid #3f3f3f;
+    color: #9d94c4;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+.notification-clear-btn:hover {
+    background: #3d2b45;
+    color: #f0eeff;
+}
+
+.notification-row {
+    border-bottom: 1px solid #2f2f2f;
+}
+
+.notification-icon {
+    font-size: 12px;
+}
+
+.notification-category {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f0eeff;
+}
+
+.notification-time {
+    font-size: 10px;
+    color: #5c5480;
+}
+
+.notification-message {
+    font-size: 11px;
+    color: #9d94c4;
+    font-family: monospace;
+}
+
+.notification-bell-btn {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    padding: 4px 8px;
+    border-radius: 8px;
+}
+
+.notification-bell-btn:hover {
+    background: #3d2b45;
+}
+
+.notification-badge {
+    font-size: 10px;
+    color: #a020f0;
+    font-weight: 700;
+}
+
+.light .notification-panel {
+    background: #ffffff;
+    border-left: 1px solid #ddc8eb;
+}
+
+.light .notification-title {
+    color: #1a1523;
+}
+
+.light .notification-clear-btn {
+    border-color: #ddc8eb;
+    color: #6b6580;
+}
+
+.light .notification-clear-btn:hover {
+    background: #f2e8f7;
+    color: #1a1523;
+}
+
+.light .notification-row {
+    border-bottom: 1px solid #ede0f5;
+}
+
+.light .notification-category {
+    color: #1a1523;
+}
+
+.light .notification-time {
+    color: #a09bb8;
+}
+
+.light .notification-message {
+    color: #6b6580;
+}
+
+.light .notification-bell-btn:hover {
+    background: #f2e8f7;
+}
+
+.light .notification-badge {
+    color: #8B00FF;
+}
+.notification-bell-float {
+    background: #2f2f2f;
+    border: 1px solid #3f3f3f;
+    border-radius: 20px;
+    font-size: 16px;
+    padding: 6px 12px;
+    min-width: 40px;
+    min-height: 36px;
+}
+
+.notification-bell-float:hover {
+    background: #3d2b45;
+    border-color: #a020f0;
+}
+
+.light .notification-bell-float {
+    background: #ffffff;
+    border-color: #ddc8eb;
+}
+
+.light .notification-bell-float:hover {
+    background: #f2e8f7;
+    border-color: #8B00FF;
+}
+
+.permission-dialog {
+    background: #1e1e1e;
+    border: 1px solid #3f3f3f;
+    border-radius: 16px;
+}
+
+.permission-icon {
+    font-size: 40px;
+}
+
+.permission-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #f0eeff;
+}
+
+.permission-subtitle {
+    font-size: 12px;
+    color: #9d94c4;
+}
+
+.permission-commands {
+    font-size: 12px;
+    color: #e0e0e0;
+    font-family: monospace;
+    background: #111;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.permission-approve-btn {
+    background: #22c55e;
+    color: white;
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.permission-approve-btn:hover {
+    background: #16a34a;
+}
+
+.permission-deny-btn {
+    background: transparent;
+    color: #e53935;
+    border: 1px solid #e53935;
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-size: 14px;
+}
+
+.permission-deny-btn:hover {
+    background: rgba(229, 57, 53, 0.1);
+}
+
+.light .permission-dialog {
+    background: #ffffff;
+    border: 1px solid #ddc8eb;
+}
+
+.light .permission-title {
+    color: #1a1523;
+}
+
+.light .permission-subtitle {
+    color: #6b6580;
+}
+
+.light .permission-commands {
+    color: #1a1523;
+    background: #f5f3ff;
+}
+
+.light .permission-deny-btn:hover {
+    background: rgba(229, 57, 53, 0.05);
+}
+
+.right-panel {
+    background: #1a1a1a;
+    border-left: 2px solid #3f3f3f;
+}
+
+.right-panel-header {
+    background: transparent;
+}
+
+.right-panel-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #f0eeff;
+}
+
+.right-panel-close-btn {
+    background: transparent;
+    border: none;
+    color: #5c5480;
+    font-size: 16px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.right-panel-close-btn:hover {
+    background: #3d2b45;
+    color: #f0eeff;
+}
+
+.right-panel-approve-all {
+    background: #22c55e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.right-panel-approve-all:hover {
+    background: #16a34a;
+}
+
+.right-panel-deny-all {
+    background: transparent;
+    color: #e53935;
+    border: 1px solid #e53935;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.right-panel-deny-all:hover {
+    background: rgba(229, 57, 53, 0.1);
+}
+
+.approval-card {
+    background: #252525;
+    border: 1px solid #3f3f3f;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.approval-tool {
+    font-size: 12px;
+    font-weight: 700;
+    color: #a020f0;
+}
+
+.approval-path {
+    font-size: 11px;
+    color: #9d94c4;
+    font-family: monospace;
+}
+
+.approval-detail {
+    font-size: 10px;
+    color: #6b6580;
+    font-family: monospace;
+}
+
+.approval-approve-btn {
+    background: #22c55e;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.approval-approve-btn:hover {
+    background: #16a34a;
+}
+
+.approval-deny-btn {
+    background: transparent;
+    color: #e53935;
+    border: 1px solid #e53935;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.approval-deny-btn:hover {
+    background: rgba(229, 57, 53, 0.15);
+}
+
+.light .right-panel {
+    background: #ffffff;
+    border-left: 2px solid #ddc8eb;
+}
+
+.light .right-panel-title {
+    color: #1a1523;
+}
+
+.light .right-panel-close-btn:hover {
+    background: #f2e8f7;
+}
+
+.light .right-panel-deny-all:hover {
+    background: rgba(229, 57, 53, 0.05);
+}
+
+.light .approval-card {
+    background: #faf9ff;
+    border-color: #ddc8eb;
+}
+
+.light .approval-path {
+    color: #6b6580;
+}
+
+.light .approval-detail {
+    color: #a09bb8;
+}
