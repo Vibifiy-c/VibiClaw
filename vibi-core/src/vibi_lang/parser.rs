@@ -57,7 +57,7 @@ fn expect_token(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>, expecte
 
 fn expect_identifier(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>, expected: &str) -> Result<(), Vec<String>> {
     let got = iter.next();
-    eprintln!("expect_identifier: want='{}', got={:?}", expected, got);
+
     match got {
         Some(Token::Identifier(s)) if s == expected => Ok(()),
         other => Err(vec![format!("Expected '{}', got: {:?}", expected, other)]),
@@ -253,10 +253,9 @@ fn parse_job(iter: &mut std::iter::Peekable<std::slice::Iter<Token>>) -> Option<
 
 fn jobs_to_commands(jobs: &[Job]) -> Vec<Command> {
     let mut commands = Vec::new();
-    eprintln!("jobs_to_commands: {} jobs", jobs.len());
+    
     for job in jobs {
-        eprintln!("  tool={}, items={:?}, params={:?}, content={:?}, mappings={:?}",
-            job.tool_name, job.items, job.params, job.content_blocks, job.mappings);        let path = job.params.iter()
+        let path = job.params.iter()
             .find(|(k, _)| k == "path")
             .map(|(_, v)| v.clone());
         

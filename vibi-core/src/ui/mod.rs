@@ -6,7 +6,6 @@ pub mod logs;
 pub mod browser;
 pub mod settings;
 pub mod model_selector;
-pub mod notification_panel;
 pub mod approval_panel;
 pub mod ai_notebook;
 pub mod login_center;
@@ -238,6 +237,12 @@ pub fn build_window(app: &Application) {
         .default_height(800)
         .build();
 
+    // Approval panel
+    let approval_panel = Rc::new(approval_panel::ApprovalPanel::new());
+    approval_panel.revealer.set_halign(Align::End);
+    approval_panel.revealer.set_valign(Align::Fill);
+    main_overlay.add_overlay(&approval_panel.revealer);
+
     // Bell button fixed in top-right
     let bell_btn = Button::with_label("🔔");
     bell_btn.style_context().add_class("notification-bell-float");
@@ -246,6 +251,36 @@ pub fn build_window(app: &Application) {
     bell_btn.set_margin_top(8);
     bell_btn.set_margin_end(12);
     main_overlay.add_overlay(&bell_btn);
+
+    let ap_toggle = approval_panel.revealer.clone();
+    bell_btn.connect_clicked(move |_| {
+        let revealed = ap_toggle.reveals_child();
+        ap_toggle.set_reveal_child(!revealed);
+    });
+
+
+
+    // Channel for approval requests from ai_bridge (using async channel)
+    let (approval_tx, approval_rx) = async_channel::unbounded::<Vec<crate::types::Command>>();
+    
+    // Store transmitter globally for ai_bridge to use
+    crate::notification_panel::set_approval_channel(approval_tx);
+
+    // Listen for approval requests on the main thread
+    let ap_panel = approval_panel.clone();
+    gtk::glib::spawn_future_local(async move {
+        while let Ok(commands) = approval_rx.recv().await {
+            ap_panel.clear();
+            for cmd in &commands {
+                let tool = format!("{:?}", cmd.kind);
+                let path = cmd.path.as_deref().unwrap_or("-");
+                let detail = cmd.content.as_deref().unwrap_or("");
+                let short: String = detail.chars().take(60).collect();
+                ap_panel.add_card(&tool, path, &short, cmd.clone());
+            }
+            ap_panel.show();
+        }
+    });
 
     window.add(&main_overlay);
 

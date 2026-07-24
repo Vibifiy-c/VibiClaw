@@ -56,7 +56,7 @@ pub struct CommandSuggestionPopover {
     pub container: GtkBox,
     list_box: GtkBox,
 }
-
+ 
 impl CommandSuggestionPopover {
     pub fn new() -> Self {
         let container = GtkBox::new(Orientation::Vertical, 0);

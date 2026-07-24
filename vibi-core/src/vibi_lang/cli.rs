@@ -5,13 +5,7 @@ pub fn test_compile(source: &str) {
     println!("\n=== VibiClaw Compiler Test ===");
     println!("Source:\n{}\n", source);
     
-    // Debug: show tokens
-    match vibi_lang::lexer::tokenize(source) {
-        Ok(tokens) => {
-            println!("Tokens: {:?}", tokens.iter().take(30).collect::<Vec<_>>());
-        }
-        Err(e) => println!("Lexer errors: {:?}", e),
-    }
+
     match vibi_lang::compile(source) {
         Ok(commands) => {
             println!("✅ Compilation successful! {} commands:", commands.len());

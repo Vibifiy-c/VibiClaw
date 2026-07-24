@@ -8,6 +8,7 @@ mod storage;
 mod chat_store;
 mod crypto;
 mod logger;
+mod notification_panel;
 mod debug;
 mod hardware_usage;
 pub mod api;
@@ -39,14 +40,10 @@ fn main() {
     }));
     
     // GTK/GLib warning and critical logs
-    glib::log_set_default_handler(|domain, level, msg| {
-        let domain_str = domain.unwrap_or_default();
-        let level_str = match level {
-            LogLevel::Error | LogLevel::Critical => "[Error]",
-            LogLevel::Warning => "[Warning]",
-            _ => "[Debug]",
-        };
-        eprintln!("[main.rs] {} in {} : {}", level_str, domain_str, msg);
+    glib::log_set_default_handler(|_domain, level, msg| {
+        if level == LogLevel::Error || level == LogLevel::Critical {
+            eprintln!("[VibiClaw] {}", msg);
+        }
     });
     
     std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");

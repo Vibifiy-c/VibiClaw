@@ -3,6 +3,22 @@ use gtk::{Box as GtkBox, Button, Label, Orientation, Align, ScrolledWindow, Poli
 use std::rc::Rc;
 use std::cell::RefCell;
 use crate::logger::{Logger, LogEntry, LogLevel};
+use crate::types::Command;
+use std::sync::Mutex;
+
+static APPROVAL_TX: Mutex<Option<async_channel::Sender<Vec<Command>>>> = Mutex::new(None);
+
+pub fn set_approval_channel(tx: async_channel::Sender<Vec<Command>>) {
+    *APPROVAL_TX.lock().unwrap() = Some(tx);
+}
+
+pub fn queue_for_approval(commands: Vec<Command>) {
+    if let Ok(tx) = APPROVAL_TX.lock() {
+        if let Some(ref tx) = *tx {
+            let _ = tx.try_send(commands);
+        }
+    }
+}
 
 pub struct NotificationPanel {
     pub container: GtkBox,
@@ -112,17 +128,7 @@ impl NotificationPanel {
     }
 }
 
-// Standalone function for runtime to call
-pub fn queue_for_approval(commands: &[crate::types::Command]) {
-    println!("[Approval] {} commands queued for approval panel", commands.len());
-    for (i, cmd) in commands.iter().enumerate() {
-        let kind = format!("{:?}", cmd.kind);
-        let path = cmd.path.as_deref().unwrap_or("-");
-        let detail = cmd.content.as_deref().unwrap_or("");
-        let short: String = detail.chars().take(80).collect();
-        println!("  {}. {} | {} | {}", i + 1, kind, path, short);
-    }
-}
+
 
 
 fn build_notification_row(entry: &LogEntry) -> GtkBox {

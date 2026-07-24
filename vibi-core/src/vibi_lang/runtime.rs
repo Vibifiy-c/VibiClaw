@@ -14,7 +14,7 @@ pub fn execute(mut commands: Vec<Command>, executor: &Executor, require_approval
     
     if require_approval {
         // Queue commands to notification panel for user approval
-        crate::ui::notification_panel::queue_for_approval(&commands);
+        crate::notification_panel::queue_for_approval(commands.clone());
         return vec!["⏳ Commands queued for approval. Check the right panel.".to_string()];
     }
     

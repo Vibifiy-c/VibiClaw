@@ -517,17 +517,17 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     border-left: 2px solid #3f3f3f;
 }
 
-.right-panel-header {
+.approval-panel-header {
     background: transparent;
 }
 
-.right-panel-title {
+.approval-panel-title {
     font-size: 15px;
     font-weight: 700;
     color: #f0eeff;
 }
 
-.right-panel-close-btn {
+.approval-panel-close-btn {
     background: transparent;
     border: none;
     color: #5c5480;
@@ -536,12 +536,12 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     border-radius: 6px;
 }
 
-.right-panel-close-btn:hover {
+.approval-panel-close-btn:hover {
     background: #3d2b45;
     color: #f0eeff;
 }
 
-.right-panel-approve-all {
+.approval-panel-approve-all {
     background: #22c55e;
     color: white;
     border: none;
@@ -551,11 +551,11 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     font-weight: 600;
 }
 
-.right-panel-approve-all:hover {
+.approval-panel-approve-all:hover {
     background: #16a34a;
 }
 
-.right-panel-deny-all {
+.approval-panel-deny-all {
     background: transparent;
     color: #e53935;
     border: 1px solid #e53935;
@@ -565,7 +565,7 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     font-weight: 600;
 }
 
-.right-panel-deny-all:hover {
+.approval-panel-deny-all:hover {
     background: rgba(229, 57, 53, 0.1);
 }
 
@@ -623,15 +623,15 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     border-left: 2px solid #ddc8eb;
 }
 
-.light .right-panel-title {
+.light .approval-panel-title {
     color: #1a1523;
 }
 
-.light .right-panel-close-btn:hover {
+.light .approval-panel-close-btn:hover {
     background: #f2e8f7;
 }
 
-.light .right-panel-deny-all:hover {
+.light .approval-panel-deny-all:hover {
     background: rgba(229, 57, 53, 0.05);
 }
 
@@ -645,5 +645,15 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 }
 
 .light .approval-detail {
+    color: #a09bb8;
+}
+
+.approval-empty {
+    font-size: 13px;
+    color: #5c5480;
+    font-style: italic;
+}
+
+.light .approval-empty {
     color: #a09bb8;
 }
