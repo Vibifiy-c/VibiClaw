@@ -1,13 +1,13 @@
 use gtk::prelude::*;
 use gtk::{Box as GtkBox, Button, Label, Orientation, Align, Revealer, Separator, ScrolledWindow, PolicyType};
 
-pub struct RightPanel {
+pub struct ApprovalPanel {
     pub container: GtkBox,
     pub revealer: Revealer,
     pub card_list: GtkBox,
 }
 
-impl RightPanel {
+impl ApprovalPanel {
     pub fn new() -> Self {
         let revealer = Revealer::new();
         revealer.set_transition_type(gtk::RevealerTransitionType::SlideLeft);

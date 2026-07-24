@@ -512,7 +512,7 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     background: rgba(229, 57, 53, 0.05);
 }
 
-.right-panel {
+.approval-panel {
     background: #1a1a1a;
     border-left: 2px solid #3f3f3f;
 }
@@ -618,7 +618,7 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     background: rgba(229, 57, 53, 0.15);
 }
 
-.light .right-panel {
+.light .approval-panel {
     background: #ffffff;
     border-left: 2px solid #ddc8eb;
 }

@@ -112,6 +112,19 @@ impl NotificationPanel {
     }
 }
 
+// Standalone function for runtime to call
+pub fn queue_for_approval(commands: &[crate::types::Command]) {
+    println!("[Approval] {} commands queued for approval panel", commands.len());
+    for (i, cmd) in commands.iter().enumerate() {
+        let kind = format!("{:?}", cmd.kind);
+        let path = cmd.path.as_deref().unwrap_or("-");
+        let detail = cmd.content.as_deref().unwrap_or("");
+        let short: String = detail.chars().take(80).collect();
+        println!("  {}. {} | {} | {}", i + 1, kind, path, short);
+    }
+}
+
+
 fn build_notification_row(entry: &LogEntry) -> GtkBox {
     let row = GtkBox::new(Orientation::Vertical, 4);
     row.style_context().add_class("notification-row");
