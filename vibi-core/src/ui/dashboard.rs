@@ -78,8 +78,8 @@ pub fn build_chat_view(
     // AI Bridge (webview lives here)
     let ai_bridge = crate::ai_bridge::AiBridge::new();
     let ai_bridge_rc = Rc::new(ai_bridge);
-    ai_bridge_rc.webview.set_hexpand(true);
-    ai_bridge_rc.webview.set_vexpand(true);
+    ai_bridge_rc.container.set_hexpand(true);
+    ai_bridge_rc.container.set_vexpand(true);
 
     // === RENDERER PAGE (handles both native chat and webview) ===
     let (renderer_view, renderer_mode) = crate::ui::renderer::build_chat_renderer(
@@ -93,8 +93,8 @@ pub fn build_chat_view(
     view_stack.add_titled(&renderer_view, "renderer", "Renderer");
 
     root.pack_start(&view_stack, true, true, 0);
-    ai_bridge_rc.webview.set_hexpand(true);
-    ai_bridge_rc.webview.set_vexpand(true);
+    ai_bridge_rc.container.set_hexpand(true);
+    ai_bridge_rc.container.set_vexpand(true);
 
     let _bridge_send = ai_bridge_rc.clone();
     let bridge_switch = ai_bridge_rc.clone();

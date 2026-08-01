@@ -1,9 +1,9 @@
 pub mod sidebar;
 pub mod dashboard;
-pub mod agentic;
+pub mod code_editor;
 pub mod dialog;
 pub mod logs;
-pub mod browser;
+
 pub mod settings;
 pub mod model_selector;
 pub mod approval_panel;
@@ -15,6 +15,7 @@ use gtk::prelude::*;
 use gtk::{Application, ApplicationWindow, Box as GtkBox, Orientation, Align, Button, Label, Stack};
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::time::Duration;
 
 pub fn refresh_sidebar_chat_list(container: &GtkBox, store: &crate::chat_store::ChatStore, stack: &Stack, chat_store: Rc<RefCell<crate::chat_store::ChatStore>>, clear_handle: crate::ui::dashboard::ChatClearHandle, logger: Rc<RefCell<crate::logger::Logger>>) {
     let children = container.children();
@@ -162,7 +163,7 @@ pub fn build_window(app: &Application) {
     main_stack.set_vexpand(true);
 
     let logger = Rc::new(RefCell::new(crate::logger::Logger::new()));
-    let projects: Rc<RefCell<Vec<agentic::Project>>> = Rc::new(RefCell::new(Vec::new()));
+    let projects: Rc<RefCell<Vec<code_editor::Project>>> = Rc::new(RefCell::new(Vec::new()));
     let chat_list_container = Rc::new(RefCell::new(None::<GtkBox>));
     let chat_btn_nav_label: Rc<RefCell<Option<Label>>> = Rc::new(RefCell::new(None));
 
@@ -205,15 +206,15 @@ pub fn build_window(app: &Application) {
         }
     }));
     let logs_view = logs::build_logs_view(logger.clone());
-    let agentic_view = agentic::build_agentic_view(projects.clone());
-    let browser_view = browser::build_browser_view();
+    let agentic_view = code_editor::build_agentic_view(projects.clone());
+
     let settings_view = settings::build_settings_view();
 
     main_stack.add_titled(&chat_view, "chat", "Chat");
-    main_stack.add_titled(&agentic_view, "agentic", "Agentic Tool");
+    main_stack.add_titled(&agentic_view, "agentic", "Code Editor");
     main_stack.add_titled(&ai_notebook.borrow().container.clone(), "ai_notebook", "AI Notebook");
     main_stack.add_titled(&logs_view, "logs", "Logs");
-    main_stack.add_titled(&browser_view, "browser", "Browser");
+
     main_stack.add_titled(&settings_view, "settings", "Settings");
 
     let main_area = GtkBox::new(Orientation::Vertical, 0);
@@ -279,6 +280,53 @@ pub fn build_window(app: &Application) {
                 ap_panel.add_card(&tool, path, &short, cmd.clone());
             }
             ap_panel.show();
+            
+            // Poll until all cards are resolved, then execute approved ones
+            let panel = ap_panel.clone();
+            let cmds = commands.clone();
+            gtk::glib::spawn_future_local(async move {
+                // Wait for user to resolve all cards
+                loop {
+                    if panel.all_resolved() && !panel.is_empty() {
+                        break;
+                    }
+                    glib::timeout_future(std::time::Duration::from_millis(500)).await;
+                }
+                let approved = panel.get_approved_commands();
+                let total = commands.len();
+                let denied_count = total - approved.len();
+                
+                if denied_count > 0 && approved.is_empty() {
+                    println!("[VibiClaw] ❌ All {} action(s) denied by user.", denied_count);
+                }
+                
+                if !approved.is_empty() {
+                    if denied_count > 0 {
+                        println!("[VibiClaw] {} denied, executing {} approved.", denied_count, approved.len());
+                    }
+                    let sandbox_path = dirs::config_dir()
+                        .unwrap_or_else(|| std::path::PathBuf::from("."))
+                        .join("vibi-ai")
+                        .join("sandbox");
+                    if let Ok(executor) = crate::executor::Executor::new(
+                        sandbox_path.to_str().unwrap(),
+                        true,
+                    ) {
+                        let mut exec_cmds = approved;
+                        for cmd in &mut exec_cmds {
+                            executor.run(cmd);
+                            println!("[VibiClaw] {}", 
+                                if let crate::types::CommandStatus::Done = cmd.status {
+                                    format!("✅ {}", cmd.output.as_deref().unwrap_or("Done"))
+                                } else {
+                                    format!("❌ {:?}", cmd.status)
+                                }
+                            );
+                        }
+                    }
+                }
+                panel.hide();
+            });
         }
     });
 

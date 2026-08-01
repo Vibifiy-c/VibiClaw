@@ -657,3 +657,346 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
 .light .approval-empty {
     color: #a09bb8;
 }
+
+.vibi-input-bar {
+    background: #1a1a1a;
+    border-top: 1px solid #3f3f3f;
+    padding: 8px 0;
+}
+
+.vibi-chat-entry {
+    background: #2f2f2f;
+    border: 1px solid #3f3f3f;
+    border-radius: 12px;
+    padding: 10px 16px;
+    color: #f0eeff;
+    font-size: 14px;
+}
+
+.vibi-chat-entry:focus {
+    border-color: #a020f0;
+}
+
+.vibi-send-btn {
+    background: #a020f0;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.vibi-send-btn:hover {
+    background: #8e1cd9;
+}
+
+.light .vibi-input-bar {
+    background: #faf9ff;
+    border-top: 1px solid #ddc8eb;
+}
+
+.light .vibi-chat-entry {
+    background: #ffffff;
+    border-color: #ddc8eb;
+    color: #1a1523;
+}
+
+.light .vibi-send-btn {
+    background: #8B00FF;
+}
+
+.light .vibi-send-btn:hover {
+    background: #6b00cc;
+}
+
+.file-tree {
+    background: #1a1a1a;
+}
+
+.file-tree-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f0eeff;
+}
+
+.file-tree-item {
+    font-size: 12px;
+    color: #9d94c4;
+    font-family: monospace;
+    padding: 2px 0;
+}
+
+.file-tree-item:hover {
+    color: #f0eeff;
+}
+
+.editor-tab-bar {
+    background: #1a1a1a;
+    padding: 2px 0;
+}
+
+.editor-tab {
+    font-size: 12px;
+    color: #f0eeff;
+    background: #252525;
+    border-right: 1px solid #3f3f3f;
+    padding: 6px 12px;
+}
+
+.editor-line-numbers {
+    background: #141414;
+    padding-top: 8px;
+}
+
+.editor-line-num {
+    font-size: 12px;
+    color: #5c5480;
+    font-family: monospace;
+    padding: 0 4px;
+}
+
+.light .file-tree {
+    background: #faf9ff;
+}
+
+.light .file-tree-header {
+    color: #1a1523;
+}
+
+.light .file-tree-item {
+    color: #6b6580;
+}
+
+.light .file-tree-item:hover {
+    color: #1a1523;
+}
+
+.light .editor-tab-bar {
+    background: #f5f3ff;
+}
+
+.light .editor-tab {
+    background: #ffffff;
+    color: #1a1523;
+}
+
+.light .editor-line-numbers {
+    background: #faf9ff;
+}
+
+.light .editor-line-num {
+    color: #a09bb8;
+}
+
+.agentic-projects-btn {
+    background: #a020f0;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.agentic-projects-btn:hover {
+    background: #8e1cd9;
+}
+
+.project-card {
+    background: #2f2f2f;
+    border: 1px solid #3f3f3f;
+    border-radius: 14px;
+    padding: 20px;
+    transition: all 0.2s ease;
+}
+
+.project-card:hover {
+    border-color: #a020f0;
+    background: #3a2a45;
+}
+
+.project-card-icon {
+    font-size: 36px;
+}
+
+.project-card-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #f0eeff;
+}
+
+.project-card-add {
+    background: #2f2f2f;
+    border: 2px solid #3f3f3f;
+    border-radius: 14px;
+}
+
+.project-card-add:hover {
+    border-color: #a020f0;
+    background: #2a1f35;
+}
+
+.project-card-plus {
+    font-size: 48px;
+    color: #5c5480;
+}
+
+.project-card-plus-hover {
+    color: #a020f0;
+}
+
+.light .project-card-plus-hover {
+    color: #8B00FF;
+}
+
+.project-card-add:hover .project-card-plus {
+    color: #a020f0;
+}
+
+.light .project-card-add {
+    background: #ffffff;
+    border: 2px solid #ddc8eb;
+}
+
+.light .project-card-add:hover {
+    border-color: #8B00FF;
+    background: #f5eeff;
+}
+
+.light .project-card-plus {
+    color: #a09bb8;
+}
+
+.light .project-card-add:hover .project-card-plus {
+    color: #8B00FF;
+}
+
+.create-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #9d94c4;
+    margin-top: 4px;
+}
+
+.create-input {
+    background: #2f2f2f;
+    border: 1px solid #3f3f3f;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #f0eeff;
+    font-size: 14px;
+}
+
+.create-input:focus {
+    border-color: #a020f0;
+}
+
+.create-browse-btn {
+    background: #3d2b45;
+    border: 1px solid #a020f0;
+    color: #a020f0;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+}
+
+.create-browse-btn:hover {
+    background: #a020f0;
+    color: white;
+}
+
+.create-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f0eeff;
+}
+
+.create-toggle-btn {
+    background: #2f2f2f;
+    border: 1px solid #3f3f3f;
+    color: #9d94c4;
+    border-radius: 8px;
+    padding: 8px 18px;
+    font-size: 13px;
+}
+
+.create-toggle-btn:hover {
+    border-color: #a020f0;
+}
+
+.create-toggle-active {
+    background: #a020f0;
+    color: white;
+    border-color: #a020f0;
+}
+
+.create-submit-btn {
+    background: #a020f0;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 28px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.create-submit-btn:hover {
+    background: #8e1cd9;
+}
+
+.create-cancel-btn {
+    background: transparent;
+    color: #e53935;
+    border: 1px solid #e53935;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 14px;
+}
+
+.create-cancel-btn:hover {
+    background: rgba(229, 57, 53, 0.1);
+}
+
+.create-draft-btn {
+    background: transparent;
+    color: #9d94c4;
+    border: 1px solid #3f3f3f;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 14px;
+}
+
+.create-draft-btn:hover {
+    background: #3d2b45;
+    color: #f0eeff;
+}
+
+.project-card-add:hover {
+    border-color: #a020f0;
+    background: #2a2a3a;
+}
+
+.light .create-label { color: #6b6580; }
+.light .create-input { background: #ffffff; border-color: #ddc8eb; color: #1a1523; }
+.light .create-browse-btn { background: #f2e8f7; }
+.light .create-section-title { color: #1a1523; }
+.light .create-toggle-btn { background: #ffffff; border-color: #ddc8eb; color: #6b6580; }
+.light .create-draft-btn { color: #6b6580; border-color: #ddc8eb; }
+.light .create-draft-btn:hover { background: #f2e8f7; }
+.light .project-card-add:hover { background: #faf5ff; border-color: #8B00FF; }
+
+.project-draft-badge {
+    font-size: 9px;
+    font-weight: 700;
+    color: #facc15;
+    background: rgba(250, 204, 21, 0.15);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.light .project-draft-badge {
+    color: #b8860b;
+    background: rgba(184, 134, 11, 0.1);
+}

@@ -46,7 +46,7 @@ pub fn build_chat_renderer(
     container.pack_start(&back_btn, false, false, 0);
     container.pack_start(&inner_stack, true, true, 0);
 
-    webview_page.pack_start(&ai_bridge.webview, true, true, 0);
+    webview_page.pack_start(&ai_bridge.container, true, true, 0);
 
     let current_mode: Rc<RefCell<String>> = Rc::new(RefCell::new(String::from("webview")));
 

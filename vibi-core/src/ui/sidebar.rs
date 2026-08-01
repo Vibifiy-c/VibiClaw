@@ -69,7 +69,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         }
     }
 
-    let agentic_btn = nav_item_button_with_icon("Agentic Tool", "🕵️", None);
+    let agentic_btn = nav_item_button_with_icon("Code", "", None);
     nav_box.pack_start(&agentic_btn, false, false, 0);
 
     let notebook_btn = nav_item_button_with_icon("AI Notebook", "📓", Some("WEB"));
@@ -78,8 +78,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     let logs_btn = nav_item_button_with_icon("Logs", "📋", None);
     nav_box.pack_start(&logs_btn, false, false, 0);
 
-    let browser_btn = nav_item_button_with_icon("Browser", "🌐", None);
-    nav_box.pack_start(&browser_btn, false, false, 0);
+
 
     let stack_chat = stack.clone();
     let stack_agentic = stack.clone();
@@ -96,16 +95,14 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     let logs_btn_1 = logs_btn.clone();
     let logs_btn_2 = logs_btn.clone();
     let logs_btn_3 = logs_btn.clone();
-    let browser_btn_1 = browser_btn.clone();
-    let browser_btn_2 = browser_btn.clone();
-    let browser_btn_3 = browser_btn.clone();
+
 
     chat_btn.connect_clicked(move |_| {
         stack_chat.set_visible_child_name("chat");
         agentic_btn_1.style_context().remove_class("active");
         notebook_btn_1.style_context().remove_class("active");
         logs_btn_1.style_context().remove_class("active");
-        browser_btn_1.style_context().remove_class("active");
+
         chat_btn_1.style_context().add_class("active");
     });
 
@@ -114,7 +111,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         chat_btn_2.style_context().remove_class("active");
         notebook_btn_2.style_context().remove_class("active");
         logs_btn_2.style_context().remove_class("active");
-        browser_btn_2.style_context().remove_class("active");
+
         agentic_btn_2.style_context().add_class("active");
     });
 
@@ -123,7 +120,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         agentic_btn_3.style_context().remove_class("active");
         chat_btn_3.style_context().remove_class("active");
         logs_btn_3.style_context().remove_class("active");
-        browser_btn_3.style_context().remove_class("active");
+
         notebook_btn_3.style_context().add_class("active");
     });
 
@@ -141,23 +138,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         logs_btn_4.style_context().add_class("active");
     });
 
-    let stack_browser = stack.clone();
-    let browser_btn_4 = browser_btn.clone();
-    let chat_btn_5 = chat_btn.clone();
-    let agentic_btn_5 = agentic_btn.clone();
-    let notebook_btn_5 = notebook_btn.clone();
-    let logs_btn_5 = logs_btn.clone();
-    browser_btn.connect_clicked(move |_| {
-        stack_browser.set_visible_child_name("browser");
-        chat_btn_5.style_context().remove_class("active");
-        agentic_btn_5.style_context().remove_class("active");
-        notebook_btn_5.style_context().remove_class("active");
-        logs_btn_5.style_context().remove_class("active");
-        browser_btn_4.style_context().add_class("active");
-    });
 
-    let browser_for_anim = browser_btn.clone();
-    let browser_for_settings = browser_btn.clone();
 
     sidebar.pack_start(&nav_box, false, false, 0);
     sidebar.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
@@ -237,7 +218,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         agentic_s.style_context().remove_class("active");
         notebook_s.style_context().remove_class("active");
         logs_s.style_context().remove_class("active");
-        browser_for_settings.style_context().remove_class("active");
+
     });
 
     sidebar.pack_start(&footer, false, false, 0);
@@ -258,7 +239,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
     let agentic_btn_clone = agentic_btn.clone();
     let notebook_btn_clone = notebook_btn.clone();
     let logs_btn_clone = logs_btn.clone();
-    let browser_btn_clone = browser_for_anim.clone();
+
     let theme_btn_clone_anim = theme_btn.clone();
     let settings_btn_clone = settings_btn.clone();
 
@@ -286,7 +267,7 @@ pub fn build_sidebar(stack: gtk::Stack, storage: Rc<RefCell<crate::storage::AppS
         hide_nav_labels(&agentic_btn_clone, new_state);
         hide_nav_labels(&notebook_btn_clone, new_state);
         hide_nav_labels(&logs_btn_clone, new_state);
-        hide_nav_labels(&browser_btn_clone, new_state);
+
         hide_footer_labels(&theme_btn_clone_anim, new_state);
         hide_footer_labels(&settings_btn_clone, new_state);
 
