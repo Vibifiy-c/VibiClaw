@@ -3,14 +3,27 @@ use gtk::{Box as GtkBox, Label, Orientation, Align, ScrolledWindow, PolicyType, 
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fs;
 use serde::{Deserialize, Serialize};
+
+thread_local! {
+    static EDITOR_REBUILD: RefCell<Option<Box<dyn Fn()>>> = RefCell::new(None);
+}
+
+pub fn trigger_editor_rebuild() {
+    EDITOR_REBUILD.with(|r| {
+        if let Some(ref rebuild) = *r.borrow() {
+            rebuild();
+        }
+    });
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Project {
     pub id: String,
+    pub uuid: String,
     pub name: String,
     pub category: String,
+    pub directory: String,
     pub files: HashMap<String, String>,
     pub linked_chat: Option<String>,
     pub github_link: Option<String>,
@@ -29,6 +42,7 @@ pub struct DraftProject {
 
 pub fn build_agentic_view(projects: Rc<RefCell<Vec<Project>>>) -> GtkBox {
     let drafts: Rc<RefCell<Vec<DraftProject>>> = Rc::new(RefCell::new(Vec::new()));
+    let selected_dir: Rc<RefCell<Option<String>>> = Rc::new(RefCell::new(None));
     let root = GtkBox::new(Orientation::Vertical, 0);
     root.set_hexpand(true);
     root.set_vexpand(true);
@@ -38,22 +52,21 @@ pub fn build_agentic_view(projects: Rc<RefCell<Vec<Project>>>) -> GtkBox {
     stack.set_hexpand(true);
     stack.set_vexpand(true);
 
-    let categories_page = build_categories_page(projects.clone(), drafts.clone(), stack.clone());
+    let categories_page = build_categories_page(projects.clone(), drafts.clone(), selected_dir.clone(), stack.clone());
     stack.add_titled(&categories_page, "categories", "Categories");
-
 
 
     let create_page = build_create_project_page(projects.clone(), drafts.clone(), stack.clone());
     stack.add_titled(&create_page, "create", "Create Project");
 
-    let editor_page = build_code_editor_page(stack.clone());
+    let editor_page = build_code_editor_page(stack.clone(), selected_dir.clone());
     stack.add_titled(&editor_page, "editor", "Editor");
 
     root.pack_start(&stack, true, true, 0);
     root
 }
 
-fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell<Vec<DraftProject>>>, stack: Stack) -> GtkBox {
+fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell<Vec<DraftProject>>>, selected_dir: Rc<RefCell<Option<String>>>, stack: Stack) -> GtkBox {
     let root = GtkBox::new(Orientation::Vertical, 0);
     root.set_hexpand(true);
     root.set_vexpand(true);
@@ -112,24 +125,30 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
                 for entry in entries.flatten() {
                     let path = entry.path();
                     if path.is_dir() {
-                        let proj_file = path.join(".vibi_project");
+                        let proj_file = path.join(".vibecode");
                         if proj_file.exists() {
                             if let Ok(data) = std::fs::read_to_string(&proj_file) {
                                 let name = data.lines()
                                     .find(|l| l.starts_with("name="))
                                     .map(|l| l[5..].to_string())
                                     .unwrap_or_else(|| path.file_name().unwrap().to_string_lossy().to_string());
+                                let uuid = data.lines()
+                                    .find(|l| l.starts_with("uuid="))
+                                    .map(|l| l[5..].to_string())
+                                    .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
                                 let id = data.lines()
                                     .find(|l| l.starts_with("id="))
                                     .map(|l| l[3..].to_string())
-                                    .unwrap_or_else(|| format!("proj_{}", chrono::Utc::now().timestamp()));
-                                // Only add if not already in the list
+                                    .unwrap_or_else(|| uuid.clone());
                                 let mut proj_list = projects.borrow_mut();
-                                if !proj_list.iter().any(|p| p.id == id) {
+                                let dir = path.file_name().unwrap().to_string_lossy().to_string();
+                                if !proj_list.iter().any(|p| p.uuid == uuid) {
                                     proj_list.push(Project {
                                         id,
+                                        uuid,
                                         name,
                                         category: "custom".to_string(),
+                                        directory: dir,
                                         files: HashMap::new(),
                                         linked_chat: None,
                                         github_link: None,
@@ -149,6 +168,7 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
         let d = drafts.clone();
         let g = grid_ref.clone();
         let s = stack.clone();
+        let sel_dir = selected_dir.clone();
         move || {
             let grid = g.borrow();
             let children = grid.children();
@@ -157,7 +177,7 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
             }
             // Add project cards
             for proj in p.borrow().iter() {
-                let card = build_project_card(&proj.name, &proj.id, s.clone());
+                let card = build_project_card(&proj.name, &proj.id, &proj.directory, s.clone(), sel_dir.clone());
                 grid.insert(&card, -1);
             }
             // Add draft cards
@@ -179,9 +199,13 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
 
     // Store refresh function on the root widget so it can be called
     let refresh = Rc::new(RefCell::new(Some(refresh_grid)));
-    root.connect_map(move |_| {
-        if let Some(ref f) = *refresh.borrow() {
-            f();
+    root.connect_map(move |w| {
+        // Only refresh if this page is actually visible
+        if w.is_visible() {
+            println!("[CodeEditor] Categories page mapped, refreshing grid");
+            if let Some(ref f) = *refresh.borrow() {
+                f();
+            }
         }
     });
 
@@ -190,34 +214,43 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
     root
 }
 
-fn build_project_card(name: &str, id: &str, stack: Stack) -> GtkBox {
-    let card = GtkBox::new(Orientation::Vertical, 12);
+fn build_project_card(name: &str, id: &str, directory: &str, stack: Stack, sel_dir: Rc<RefCell<Option<String>>>) -> GtkBox {
+    let card = Button::new();
     card.style_context().add_class("project-card");
     card.set_size_request(180, 150);
+    card.set_relief(gtk::ReliefStyle::None);
+
+    let content = GtkBox::new(Orientation::Vertical, 12);
+    content.set_halign(Align::Center);
+    content.set_valign(Align::Center);
 
     let icon = Label::new(Some("📁"));
     icon.style_context().add_class("project-card-icon");
     icon.set_halign(Align::Center);
-    card.pack_start(&icon, false, false, 0);
+    content.pack_start(&icon, false, false, 0);
 
     let name_label = Label::new(Some(name));
     name_label.style_context().add_class("project-card-name");
     name_label.set_halign(Align::Center);
     name_label.set_ellipsize(pango::EllipsizeMode::End);
     name_label.set_max_width_chars(16);
-    card.pack_start(&name_label, false, false, 0);
+    content.pack_start(&name_label, false, false, 0);
 
-    let id_clone = id.to_string();
+    card.add(&content);
+
+    let dir_clone = directory.to_string();
     let s = stack.clone();
-    let event_box = gtk::EventBox::new();
-    event_box.add(&card);
-    event_box.connect_button_press_event(move |_, _| {
+    let sd = sel_dir.clone();
+    card.connect_clicked(move |_| {
+        *sd.borrow_mut() = Some(dir_clone.clone());
+        println!("[CodeEditor] Project card clicked: {}, setting dir and switching", dir_clone);
         s.set_visible_child_name("editor");
-        false.into()
+        crate::ui::code_editor::trigger_editor_rebuild();
+        println!("[CodeEditor] Switched to editor, now showing: {:?}", s.visible_child_name());
     });
 
     let container = GtkBox::new(Orientation::Vertical, 0);
-    container.pack_start(&event_box, true, true, 0);
+    container.pack_start(&card, true, true, 0);
     container
 }
 
@@ -506,28 +539,52 @@ fn build_create_project_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<Ref
             return;
         }
         let gh = ge2.text().to_string();
-        let project_id = format!("proj_{}", chrono::Utc::now().timestamp());
+        let project_uuid = uuid::Uuid::new_v4().to_string();
+        let project_name = name.trim().to_string();
         
-        // Create project directory in sandbox
-        let sandbox = dirs::config_dir()
+        // Create project directory in sandbox using project name
+        let sandbox_base = dirs::config_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
             .join("vibi-ai")
             .join("sandbox")
-            .join(dir.trim());
-        std::fs::create_dir_all(&sandbox).ok();
+            .join(&project_name);
+        std::fs::create_dir_all(&sandbox_base).ok();
         
-        // Write a .vibi_project file
-        let proj_file = sandbox.join(".vibi_project");
-        let proj_data = format!("id={}\nname={}\ncreated={}\n", 
-            project_id, 
-            name.trim(),
+        // Copy files from selected directory into sandbox/project_name
+        let source_dir = std::path::PathBuf::from(dir.trim());
+        if source_dir.exists() && source_dir.is_dir() {
+            fn copy_dir(src: &std::path::Path, dst: &std::path::Path) {
+                if let Ok(entries) = std::fs::read_dir(src) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        let dest = dst.join(entry.file_name());
+                        if path.is_dir() {
+                            std::fs::create_dir_all(&dest).ok();
+                            copy_dir(&path, &dest);
+                        } else {
+                            std::fs::copy(&path, &dest).ok();
+                        }
+                    }
+                }
+            }
+            copy_dir(&source_dir, &sandbox_base);
+        }
+        
+        // Write .vibecode file
+        let proj_file = sandbox_base.join(".vibecode");
+        let proj_data = format!("uuid={}\nid={}\nname={}\ncreated={}\n",
+            project_uuid,
+            project_uuid,
+            &project_name,
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S")
         );
         std::fs::write(&proj_file, proj_data).ok();
         
         let project = Project {
-            id: project_id,
-            name: name.trim().to_string(),
+            id: project_uuid.clone(),
+            uuid: project_uuid,
+            directory: project_name.clone(),
+            name: project_name,
             category: "custom".to_string(),
             files: HashMap::new(),
             linked_chat: None,
@@ -601,12 +658,40 @@ fn build_draft_card(name: &str, index: usize, drafts: Rc<RefCell<Vec<DraftProjec
     container
 }
 
-fn build_code_editor_page(stack: Stack) -> GtkBox {
+fn get_tree_scroll_value(tree_holder: &GtkBox) -> f64 {
+    if let Some(tree) = tree_holder.children().get(0) {
+        if let Some(inner) = tree.clone().downcast::<GtkBox>().ok() {
+            if let Some(scroll_widget) = inner.children().get(2) {
+                if let Ok(sw) = scroll_widget.clone().downcast::<ScrolledWindow>() {
+                    return sw.vadjustment().value();
+                }
+            }
+        }
+    }
+    0.0
+}
+
+fn restore_tree_scroll_value(tree_holder: &Rc<RefCell<GtkBox>>, value: f64) {
+    let th = tree_holder.clone();
+    gtk::glib::idle_add_local_once(move || {
+        let holder = th.borrow();
+        if let Some(tree) = holder.children().get(0) {
+            if let Some(inner) = tree.clone().downcast::<GtkBox>().ok() {
+                if let Some(scroll_widget) = inner.children().get(2) {
+                    if let Ok(sw) = scroll_widget.clone().downcast::<ScrolledWindow>() {
+                        sw.vadjustment().set_value(value);
+                    }
+                }
+            }
+        }
+    });
+}
+
+fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<String>>>) -> GtkBox {
     let root = GtkBox::new(Orientation::Vertical, 0);
     root.set_hexpand(true);
     root.set_vexpand(true);
 
-    // Topbar
     let topbar = GtkBox::new(Orientation::Horizontal, 0);
     topbar.style_context().add_class("topbar");
     topbar.set_margin_start(24);
@@ -631,34 +716,134 @@ fn build_code_editor_page(stack: Stack) -> GtkBox {
     root.pack_start(&topbar, false, false, 0);
     root.pack_start(&divider, false, false, 0);
 
-    // Scrollable wrapper
     let editor_scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
     editor_scroll.set_hexpand(true);
     editor_scroll.set_vexpand(true);
     editor_scroll.set_policy(PolicyType::Automatic, PolicyType::Automatic);
 
-    // Main editor area: file tree + editor
     let editor_box = GtkBox::new(Orientation::Horizontal, 0);
     editor_box.set_hexpand(true);
     editor_box.set_vexpand(true);
 
-    // File tree sidebar
-    let file_tree = build_file_tree();
-    editor_box.pack_start(&file_tree, false, false, 0);
+    // Shared state for tabs and editor
+    let tab_bar = Rc::new(RefCell::new(GtkBox::new(Orientation::Horizontal, 0)));
+    tab_bar.borrow().style_context().add_class("editor-tab-bar");
+    
+    let code_view = gtk::TextView::new();
+    code_view.set_vexpand(true);
+    code_view.set_hexpand(true);
+    code_view.set_wrap_mode(gtk::WrapMode::None);
+    code_view.set_monospace(true);
+    code_view.set_left_margin(12);
+    code_view.set_top_margin(8);
+    code_view.set_editable(true);
+    
+    let code_scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+    code_scroll.set_policy(PolicyType::Automatic, PolicyType::Automatic);
+    code_scroll.add(&code_view);
 
-    // Separator between tree and editor
+    // File tree holder — stable reference for rebuilds
+    let tree_holder = Rc::new(RefCell::new(GtkBox::new(Orientation::Vertical, 0)));
+    let file_tree = build_file_tree(code_view.clone(), tab_bar.clone(), project_directory.clone());
+    tree_holder.borrow().pack_start(&file_tree, true, true, 0);
+
+    editor_box.pack_start(&*tree_holder.borrow(), false, false, 0);
     editor_box.pack_start(&Separator::new(Orientation::Vertical), false, false, 0);
 
-    // Code editing area
-    let editor_area = build_editor_area();
-    editor_box.pack_start(&editor_area, true, true, 0);
+    // Editor area with tabs + code
+    let editor_area = GtkBox::new(Orientation::Vertical, 0);
+    editor_area.set_hexpand(true);
+    editor_area.set_vexpand(true);
+    
+    let dir_label = Label::new(Some("📂 Loading..."));
+    dir_label.style_context().add_class("editor-dir-label");
+    dir_label.set_halign(Align::Start);
+    dir_label.set_margin_start(12);
+    dir_label.set_margin_top(4);
+    let dir_label_clone = dir_label.clone();
+    editor_area.pack_start(&dir_label, false, false, 0);
+    editor_area.pack_start(&*tab_bar.borrow(), false, false, 0);
+    editor_area.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
+    editor_area.pack_start(&code_scroll, true, true, 0);
 
+    editor_box.pack_start(&editor_area, true, true, 0);
     editor_scroll.add(&editor_box);
     root.pack_start(&editor_scroll, true, true, 0);
+
+    // Register rebuild function
+    let pd_rebuild = project_directory.clone();
+    let cv_rebuild = code_view.clone();
+    let tb_rebuild = tab_bar.clone();
+    let th_rebuild = tree_holder.clone();
+    let dl_rebuild = dir_label_clone.clone();
+    EDITOR_REBUILD.with(|r| {
+        *r.borrow_mut() = Some(Box::new(move || {
+            let dir_text = match pd_rebuild.borrow().as_ref() {
+                Some(d) => format!("📂 Project: {}", d),
+                None => "📂 Sandbox (root)".to_string(),
+            };
+            dl_rebuild.set_text(&dir_text);
+            let scroll_pos = get_tree_scroll_value(&th_rebuild.borrow());
+            let holder = th_rebuild.borrow();
+            for child in holder.children() {
+                holder.remove(&child);
+            }
+            let new_tree = build_file_tree(cv_rebuild.clone(), tb_rebuild.clone(), pd_rebuild.clone());
+            holder.pack_start(&new_tree, true, true, 0);
+            holder.show_all();
+            drop(holder);
+            restore_tree_scroll_value(&th_rebuild, scroll_pos);
+        }));
+    });
+    
+    // Rebuild file tree every time editor becomes visible
+    let pd_map = project_directory.clone();
+    let cv_map = code_view.clone();
+    let tb_map = tab_bar.clone();
+    let th_map = tree_holder.clone();
+    let dl_map = dir_label_clone.clone();
+    root.connect_map(move |_| {
+        let dir_text = match pd_map.borrow().as_ref() {
+            Some(d) => format!("📂 Project: {}", d),
+            None => "📂 Sandbox (root)".to_string(),
+        };
+        dl_map.set_text(&dir_text);
+
+        let scroll_pos = get_tree_scroll_value(&th_map.borrow());
+        let holder = th_map.borrow();
+        for child in holder.children() {
+            holder.remove(&child);
+        }
+        let new_tree = build_file_tree(cv_map.clone(), tb_map.clone(), pd_map.clone());
+        holder.pack_start(&new_tree, true, true, 0);
+        holder.show_all();
+        drop(holder);
+        restore_tree_scroll_value(&th_map, scroll_pos);
+    });
+    
+        // Periodic file tree refresh every 2 seconds (inotify removed due to thread safety)
+    let pd = project_directory.clone();
+    let cv = code_view.clone();
+    let tb = tab_bar.clone();
+    let th = tree_holder.clone();
+    gtk::glib::timeout_add_local(std::time::Duration::from_secs(2), move || {
+        let scroll_pos = get_tree_scroll_value(&th.borrow());
+        let holder = th.borrow();
+        for child in holder.children() {
+            holder.remove(&child);
+        }
+        let new_tree = build_file_tree(cv.clone(), tb.clone(), pd.clone());
+        holder.pack_start(&new_tree, true, true, 0);
+        holder.show_all();
+        drop(holder);
+        restore_tree_scroll_value(&th, scroll_pos);
+        gtk::glib::ControlFlow::Continue
+    });
+    
     root
 }
 
-fn build_file_tree() -> GtkBox {
+fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, project_directory: Rc<RefCell<Option<String>>>) -> GtkBox {
     let container = GtkBox::new(Orientation::Vertical, 0);
     container.set_size_request(220, -1);
     container.style_context().add_class("file-tree");
@@ -679,13 +864,27 @@ fn build_file_tree() -> GtkBox {
     let tree_list = GtkBox::new(Orientation::Vertical, 0);
     tree_list.set_vexpand(true);
 
-    // Read actual sandbox directory
-    let sandbox = dirs::config_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("vibi-ai")
-        .join("sandbox");
+    let stored_dir = project_directory.borrow().clone();
+    let sandbox = if let Some(ref dir) = stored_dir {
+        dirs::config_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("vibi-ai")
+            .join("sandbox")
+            .join(dir)
+    } else {
+        dirs::config_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("vibi-ai")
+            .join("sandbox")
+    };
     
-    fn add_directory_entries(parent: &GtkBox, path: &std::path::Path, depth: i32) {
+    fn add_directory_entries(
+        parent: &GtkBox,
+        path: &std::path::Path,
+        depth: i32,
+        code_view: &gtk::TextView,
+        tab_bar: &Rc<RefCell<GtkBox>>,
+    ) {
         if depth > 4 { return; }
         if let Ok(entries) = std::fs::read_dir(path) {
             let mut items: Vec<_> = entries.filter_map(|e| e.ok()).collect();
@@ -701,177 +900,53 @@ fn build_file_tree() -> GtkBox {
                 let indent = "  ".repeat(depth as usize);
                 let icon = if is_dir { "📁" } else { "📄" };
                 
-                let row = GtkBox::new(Orientation::Horizontal, 4);
+                let row = Button::new();
+                row.set_relief(gtk::ReliefStyle::None);
+                row.style_context().add_class("file-tree-item");
+                row.set_label(&format!("{} {}{}", icon, indent, name));
+                row.set_halign(Align::Start);
                 row.set_margin_start(12 + depth * 12);
                 row.set_margin_top(1);
                 row.set_margin_bottom(1);
-                let label = Label::new(Some(&format!("{} {}{}", icon, indent, name)));
-                label.style_context().add_class("file-tree-item");
-                label.set_halign(Align::Start);
-                row.pack_start(&label, false, false, 0);
+                
+                if !is_dir {
+                    let file_path = entry.path();
+                    let cv = code_view.clone();
+                    let tb = tab_bar.clone();
+                    let file_name = name.clone();
+                    row.connect_clicked(move |_| {
+                        // Load file content
+                        if let Ok(content) = std::fs::read_to_string(&file_path) {
+                            if let Some(buffer) = cv.buffer() {
+                                buffer.set_text(&content);
+                            }
+                        }
+                        // Update tabs
+                        let tb_ref = tb.borrow();
+                        let children = tb_ref.children();
+                        for child in &children {
+                            tb_ref.remove(child);
+                        }
+                        let tab_label = Label::new(Some(&format!("  {}  ✕  ", file_name)));
+                        tab_label.style_context().add_class("editor-tab");
+                        tab_label.style_context().add_class("editor-tab-active");
+                        tb_ref.pack_start(&tab_label, false, false, 0);
+                        tb_ref.show_all();
+                    });
+                }
+                
                 parent.pack_start(&row, false, false, 0);
                 
                 if is_dir {
-                    add_directory_entries(parent, &entry.path(), depth + 1);
+                    add_directory_entries(parent, &entry.path(), depth + 1, code_view, tab_bar);
                 }
             }
         }
     }
     
-    add_directory_entries(&tree_list, &sandbox, 0);
+    add_directory_entries(&tree_list, &sandbox, 0, &code_view, &tab_bar);
 
     scroll.add(&tree_list);
     container.pack_start(&scroll, true, true, 0);
-    container
-}
-    let container = GtkBox::new(Orientation::Vertical, 0);
-    container.set_size_request(220, -1);
-    container.style_context().add_class("file-tree");
-
-    let header = Label::new(Some("📁 Files"));
-    header.style_context().add_class("file-tree-header");
-    header.set_halign(Align::Start);
-    header.set_margin_start(12);
-    header.set_margin_top(8);
-    header.set_margin_bottom(8);
-    container.pack_start(&header, false, false, 0);
-    container.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
-
-    let scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
-    scroll.set_vexpand(true);
-    scroll.set_policy(PolicyType::Never, PolicyType::Automatic);
-
-    let tree_list = GtkBox::new(Orientation::Vertical, 0);
-    tree_list.set_vexpand(true);
-
-    // Demo files
-    let demo_files = vec![
-        ("📄", "main.rs", "src/"),
-        ("📄", "style.css", "src/ui/"),
-        ("📄", "dashboard.rs", "src/ui/"),
-        ("📄", "chatgpt.js", "src/agentic_detection/"),
-        ("📁", "vibi_lang", ""),
-        ("📄", "  lexer.rs", "src/vibi_lang/"),
-        ("📄", "  parser.rs", "src/vibi_lang/"),
-        ("📄", "  compiler.rs", "src/vibi_lang/"),
-    ];
-
-    for (icon, name, _path) in &demo_files {
-        let row = GtkBox::new(Orientation::Horizontal, 4);
-        row.set_margin_start(12);
-        row.set_margin_top(2);
-        row.set_margin_bottom(2);
-        let label = Label::new(Some(&format!("{} {}", icon, name)));
-        label.style_context().add_class("file-tree-item");
-        label.set_halign(Align::Start);
-        row.pack_start(&label, false, false, 0);
-        tree_list.pack_start(&row, false, false, 0);
-    }
-
-    scroll.add(&tree_list);
-    container.pack_start(&scroll, true, true, 0);
-    container
-}
-
-fn build_editor_area() -> GtkBox {
-    let container = GtkBox::new(Orientation::Vertical, 0);
-    container.set_hexpand(true);
-    container.set_vexpand(true);
-
-    // Tab bar
-    let tab_bar = GtkBox::new(Orientation::Horizontal, 0);
-    tab_bar.style_context().add_class("editor-tab-bar");
-    let tab = Label::new(Some("  main.rs  ✕  "));
-    tab.style_context().add_class("editor-tab");
-    tab_bar.pack_start(&tab, false, false, 0);
-    container.pack_start(&tab_bar, false, false, 0);
-    container.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
-
-    // Line numbers + text view
-    let editor_body = GtkBox::new(Orientation::Horizontal, 0);
-    editor_body.set_hexpand(true);
-    editor_body.set_vexpand(true);
-
-    // Line numbers
-    let line_numbers = GtkBox::new(Orientation::Vertical, 0);
-    line_numbers.set_size_request(48, -1);
-    line_numbers.style_context().add_class("editor-line-numbers");
-    let line_scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
-    line_scroll.set_policy(PolicyType::Never, PolicyType::Never);
-    let line_labels = GtkBox::new(Orientation::Vertical, 0);
-    for i in 1..=50 {
-        let num = Label::new(Some(&format!("{:>3}", i)));
-        num.style_context().add_class("editor-line-num");
-        num.set_halign(Align::End);
-        num.set_margin_end(8);
-        line_labels.pack_start(&num, false, false, 0);
-    }
-    line_scroll.add(&line_labels);
-    line_numbers.pack_start(&line_scroll, true, true, 0);
-    editor_body.pack_start(&line_numbers, false, false, 0);
-    editor_body.pack_start(&Separator::new(Orientation::Vertical), false, false, 0);
-
-    // Code text view
-    let code_view = gtk::TextView::new();
-    code_view.set_vexpand(true);
-    code_view.set_hexpand(true);
-    code_view.set_wrap_mode(gtk::WrapMode::None);
-    code_view.set_monospace(true);
-    code_view.set_left_margin(12);
-    code_view.set_top_margin(8);
-
-    if let Some(buffer) = code_view.buffer() {
-        buffer.set_text(r#"// main.rs - VibiClaw Entry Point
-
-mod types;
-mod sandbox;
-mod executor;
-mod ui;
-mod ai_bridge;
-mod vibi_lang;
-mod storage;
-mod chat_store;
-mod crypto;
-mod logger;
-mod hardware_usage;
-
-use gtk::prelude::*;
-use gtk::Application;
-
-fn main() {
-    let app = Application::builder()
-        .application_id("com.vibi.claw")
-        .build();
-
-    app.connect_startup(|_| {
-        load_css();
-        hardware_usage::start_hardware_server();
-    });
-    
-    app.connect_activate(ui::build_window);
-    app.run();
-}
-
-fn load_css() {
-    let provider = gtk::CssProvider::new();
-    provider.load_from_data(
-        include_str!("ui/style.css").as_bytes()
-    ).ok();
-    
-    gtk::StyleContext::add_provider_for_screen(
-        &gdk::Screen::default()
-            .expect("Could not connect to display"),
-        &provider,
-        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-    );
-}"#);
-    }
-
-    let code_scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
-    code_scroll.set_policy(PolicyType::Automatic, PolicyType::Automatic);
-    code_scroll.add(&code_view);
-    editor_body.pack_start(&code_scroll, true, true, 0);
-
-    container.pack_start(&editor_body, true, true, 0);
     container
 }

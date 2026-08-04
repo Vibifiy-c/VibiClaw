@@ -1000,3 +1000,14 @@ label.title { color: #f0eeff; font-size: 20px; font-weight: 500; }
     color: #b8860b;
     background: rgba(184, 134, 11, 0.1);
 }
+
+.editor-tab-active {
+    background: #a020f0;
+    color: white;
+}
+
+.editor-dir-label {
+    font-size: 11px;
+    color: #5c5480;
+    font-family: monospace;
+}

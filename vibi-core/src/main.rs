@@ -18,14 +18,7 @@ use gtk::{Application, CssProvider};
 use glib::LogLevel;
 
 fn main() {
-    // Temp: test VibiClaw compiler
-    let test_path = std::path::Path::new("test.vl");
-    if test_path.exists() {
-        let source = std::fs::read_to_string(test_path).expect("Failed to read test.v");
-        vibi_lang::cli::test_compile(&source);
-    } else {
-        println!("No test.v found, create one to test the compiler");
-    }
+
     // Global panic hook - logs crashes with location
     std::panic::set_hook(Box::new(|info| {
         let msg = if let Some(s) = info.payload().downcast_ref::<&str>() {
