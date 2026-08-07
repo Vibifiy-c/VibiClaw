@@ -3,12 +3,10 @@ pub mod dashboard;
 pub mod code_editor;
 pub mod dialog;
 pub mod logs;
-
 pub mod settings;
 pub mod model_selector;
 pub mod approval_panel;
 pub mod ai_notebook;
-pub mod login_center;
 pub mod renderer;
 
 use gtk::prelude::*;
@@ -185,10 +183,6 @@ pub fn build_window(app: &Application) {
     };
 
     let ai_notebook = Rc::new(RefCell::new(ai_notebook::build_ai_notebook(main_stack.clone())));
-
-    let login_center_page = login_center::build_login_center_page(main_stack.clone());
-    main_stack.add_titled(&login_center_page.container, "login_center", "Login Center");
-
     let refresh_chats_cell: Rc<RefCell<Option<Box<dyn Fn()>>>> = Rc::new(RefCell::new(None));
     let refresh_chats_placeholder = refresh_chats_cell.clone();
     let (chat_view, preview_panel, clear_handle) = dashboard::build_chat_view(chat_store.clone(), logger.clone(), ai_notebook.clone(), Box::new(move || {

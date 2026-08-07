@@ -10,7 +10,6 @@ mod crypto;
 mod logger;
 mod notification_panel;
 mod debug;
-mod hardware_usage;
 pub mod api;
 
 use gtk::prelude::*;
@@ -55,7 +54,6 @@ fn main() {
 
     app.connect_startup(|_| {
         load_css();
-        hardware_usage::start_hardware_server();
     });
     app.connect_activate(ui::build_window);
 

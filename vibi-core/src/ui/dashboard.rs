@@ -251,7 +251,7 @@ fn build_webview_section(cards_registry: &Rc<RefCell<Vec<(String, Button)>>>, vi
         let stack_clone = view_stack.clone();
         let title_clone = chat_title.clone();
         let mode = renderer_mode.clone();
-        let card = build_model_card(emoji, name, domain, company, "webview", "", Box::new(move || {
+        let card = build_model_card(emoji, name, domain, company, "webview", id, Box::new(move || {
             bridge_clone.load_model(&id_clone);
             *mode.borrow_mut() = String::from("webview");
             title_clone.set_text(&name_clone);
@@ -495,7 +495,7 @@ fn build_recent_chats_section(chat_store: Rc<RefCell<ChatStore>>, view_stack: St
     section
 }
 
-fn build_model_card(emoji: &str, name: &str, _domain: &str, company: &str, model_type: &str, _model_id: &str, on_click: Box<dyn Fn() + 'static>) -> Button {
+fn build_model_card(emoji: &str, name: &str, _domain: &str, company: &str, model_type: &str, model_id: &str, on_click: Box<dyn Fn() + 'static>) -> Button {
     let card = Button::new();
     card.style_context().add_class("dashboard-model-card");
     card.set_size_request(170, 120);
@@ -506,10 +506,45 @@ fn build_model_card(emoji: &str, name: &str, _domain: &str, company: &str, model
     content.set_margin_start(10);
     content.set_margin_end(10);
 
-    let icon = Label::new(Some(emoji));
-    icon.style_context().add_class("dashboard-model-icon");
-    icon.set_halign(Align::Center);
-    content.pack_start(&icon, false, false, 0);
+    let dash_icon = match model_id {
+        "chatgpt" | "gpt-4o" | "gpt-4" | "gpt-3.5-turbo" => "chatgpt-icon.png",
+        "gemini" | "gemini-2.5-pro" | "gemini-2.5-flash" | "gemini-1.5-pro" => "google-gemini-icon.png",
+        "claude" | "claude-opus" | "claude-sonnet" => "claude-ai-icon.png",
+        "deepseek" | "deepseek-v3" | "deepseek-r1" | "deepseek-api" => "deepseek-logo-icon.png",
+        "qwen" => "qwen-ai-icon.png",
+        "kimi" => "kimi-ai-icon.png",
+        "kaggle" => "kaggle-icon.png",
+        "colab" => "google-colab-icon.png",
+        _ => "",
+    };
+    let icon_path = if !dash_icon.is_empty() {
+        format!("src/icons/{}", dash_icon)
+    } else {
+        format!("src/icons/{}-icon.png", model_id)
+    };
+    let icon_widget: GtkBox = if std::path::Path::new(&icon_path).exists() {
+        if let Ok(pixbuf) = gdk_pixbuf::Pixbuf::from_file_at_scale(&icon_path, 28, 28, true) {
+            let img = gtk::Image::from_pixbuf(Some(&pixbuf));
+            img.set_halign(Align::Center);
+            let box_wrapper = GtkBox::new(Orientation::Horizontal, 0);
+            box_wrapper.set_halign(Align::Center);
+            box_wrapper.pack_start(&img, false, false, 0);
+            box_wrapper
+        } else {
+            let fallback = GtkBox::new(Orientation::Horizontal, 0);
+            fallback.set_halign(Align::Center);
+            fallback
+        }
+    } else {
+        let emoji_label = Label::new(Some(emoji));
+        emoji_label.style_context().add_class("dashboard-model-icon");
+        emoji_label.set_halign(Align::Center);
+        let box_wrapper = GtkBox::new(Orientation::Horizontal, 0);
+        box_wrapper.set_halign(Align::Center);
+        box_wrapper.pack_start(&emoji_label, false, false, 0);
+        box_wrapper
+    };
+    content.pack_start(&icon_widget, false, false, 0);
 
     let name_label = Label::new(Some(name));
     name_label.style_context().add_class("dashboard-model-name");

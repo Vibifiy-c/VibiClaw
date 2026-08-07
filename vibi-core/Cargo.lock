@@ -2531,6 +2531,7 @@ dependencies = [
  "dark-light",
  "dirs 5.0.1",
  "gdk",
+ "gdk-pixbuf",
  "gio",
  "glib",
  "gtk",

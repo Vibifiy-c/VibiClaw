@@ -39,33 +39,7 @@ pub fn build_ai_notebook(stack: gtk::Stack) -> AiNotebook {
     content.set_halign(Align::Start);
     content.set_valign(Align::Start);
     
-    let card = Button::new();
-    card.style_context().add_class("login-master-card");
-    card.set_size_request(240, 200);
     
-    let card_content = GtkBox::new(Orientation::Vertical, 16);
-    card_content.set_margin_top(24);
-    
-    let card_icon = Label::new(Some("🔐"));
-    card_icon.style_context().add_class("login-master-icon");
-    card_icon.set_halign(Align::Center);
-    card_content.pack_start(&card_icon, false, false, 0);
-    
-    let card_title = Label::new(Some("AI Login Center"));
-    card_title.style_context().add_class("login-master-title");
-    card_title.set_halign(Align::Center);
-    card_content.pack_start(&card_title, false, false, 0);
-    
-    let card_sub = Label::new(Some("Manage AI accounts"));
-    card_sub.style_context().add_class("login-master-sub");
-    card_sub.set_halign(Align::Center);
-    card_content.pack_start(&card_sub, false, false, 0);
-    
-    card.add(&card_content);
-    content.pack_start(&card, false, false, 0);
-    
-    let s = stack.clone();
-    card.connect_clicked(move |_| s.set_visible_child_name("login_center"));
     
     scroll.add(&content);
     container.pack_start(&scroll, true, true, 0);

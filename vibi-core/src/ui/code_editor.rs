@@ -3,10 +3,28 @@ use gtk::{Box as GtkBox, Label, Orientation, Align, ScrolledWindow, PolicyType, 
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use gdk_pixbuf::Pixbuf;
 use serde::{Deserialize, Serialize};
 
 thread_local! {
     static EDITOR_REBUILD: RefCell<Option<Box<dyn Fn()>>> = RefCell::new(None);
+}
+
+use std::sync::LazyLock;
+static FOLDER_STATE: LazyLock<std::sync::Mutex<HashMap<String, bool>>> = LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
+
+fn is_folder_collapsed(path: &str) -> bool {
+    let state = FOLDER_STATE.lock().unwrap();
+    // Default: collapsed on first load
+    *state.get(path).unwrap_or(&true)
+}
+
+fn toggle_folder_state(path: &str) -> bool {
+    let mut state = FOLDER_STATE.lock().unwrap();
+    let current = *state.get(path).unwrap_or(&true);
+    let new = !current;
+    state.insert(path.to_string(), new);
+    new
 }
 
 pub fn trigger_editor_rebuild() {
@@ -107,10 +125,11 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
     projects_grid.set_selection_mode(gtk::SelectionMode::None);
     projects_grid.set_min_children_per_line(2);
     projects_grid.set_max_children_per_line(6);
-    projects_grid.set_homogeneous(true);
+    projects_grid.set_homogeneous(false);
     projects_grid.set_row_spacing(16);
     projects_grid.set_column_spacing(16);
     projects_grid.set_halign(Align::Start);
+    projects_grid.set_valign(Align::Start);
 
     let grid_ref = Rc::new(RefCell::new(projects_grid.clone()));
 
@@ -177,7 +196,7 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
             }
             // Add project cards
             for proj in p.borrow().iter() {
-                let card = build_project_card(&proj.name, &proj.id, &proj.directory, s.clone(), sel_dir.clone());
+                let card = build_project_card(&proj.name, &proj.id, &proj.directory, s.clone(), sel_dir.clone(), grid_ref.clone());
                 grid.insert(&card, -1);
             }
             // Add draft cards
@@ -214,11 +233,16 @@ fn build_categories_page(projects: Rc<RefCell<Vec<Project>>>, drafts: Rc<RefCell
     root
 }
 
-fn build_project_card(name: &str, id: &str, directory: &str, stack: Stack, sel_dir: Rc<RefCell<Option<String>>>) -> GtkBox {
+fn build_project_card(name: &str, id: &str, directory: &str, stack: Stack, sel_dir: Rc<RefCell<Option<String>>>, grid_ref: Rc<RefCell<gtk::FlowBox>>) -> GtkBox {
+    let container = GtkBox::new(Orientation::Vertical, 0);
+    container.set_size_request(180, 150);
+
+    // Main card button
     let card = Button::new();
     card.style_context().add_class("project-card");
-    card.set_size_request(180, 150);
     card.set_relief(gtk::ReliefStyle::None);
+    card.set_hexpand(true);
+    card.set_vexpand(true);
 
     let content = GtkBox::new(Orientation::Vertical, 12);
     content.set_halign(Align::Center);
@@ -233,7 +257,7 @@ fn build_project_card(name: &str, id: &str, directory: &str, stack: Stack, sel_d
     name_label.style_context().add_class("project-card-name");
     name_label.set_halign(Align::Center);
     name_label.set_ellipsize(pango::EllipsizeMode::End);
-    name_label.set_max_width_chars(16);
+    name_label.set_max_width_chars(14);
     content.pack_start(&name_label, false, false, 0);
 
     card.add(&content);
@@ -243,15 +267,159 @@ fn build_project_card(name: &str, id: &str, directory: &str, stack: Stack, sel_d
     let sd = sel_dir.clone();
     card.connect_clicked(move |_| {
         *sd.borrow_mut() = Some(dir_clone.clone());
-        println!("[CodeEditor] Project card clicked: {}, setting dir and switching", dir_clone);
         s.set_visible_child_name("editor");
         crate::ui::code_editor::trigger_editor_rebuild();
-        println!("[CodeEditor] Switched to editor, now showing: {:?}", s.visible_child_name());
     });
 
-    let container = GtkBox::new(Orientation::Vertical, 0);
-    container.pack_start(&card, true, true, 0);
+    // Action buttons row
+    let actions = GtkBox::new(Orientation::Horizontal, 4);
+    actions.set_halign(Align::Center);
+    actions.set_margin_top(2);
+    actions.set_margin_bottom(6);
+
+    let edit_btn = Button::with_label("✏️");
+    edit_btn.style_context().add_class("project-action-btn");
+    edit_btn.set_size_request(28, 28);
+
+    let delete_btn = Button::with_label("🗑");
+    delete_btn.style_context().add_class("project-action-btn");
+    delete_btn.style_context().add_class("project-delete-btn");
+    delete_btn.set_size_request(28, 28);
+
+    actions.pack_start(&edit_btn, false, false, 0);
+    actions.pack_start(&delete_btn, false, false, 0);
+
+    // Main layout
+    let outer = GtkBox::new(Orientation::Vertical, 0);
+    outer.style_context().add_class("project-card-outer");
+    outer.pack_start(&card, true, true, 0);
+    outer.pack_start(&actions, false, false, 0);
+    container.pack_start(&outer, true, true, 0);
+
+    // Edit handler
+    let dir_edit = directory.to_string();
+    let name_edit = name.to_string();
+    let id_edit = id.to_string();
+    let card_edit = card.clone();
+    edit_btn.connect_clicked(move |_| {
+        show_rename_project_dialog(&name_edit, &dir_edit, &id_edit, &card_edit);
+    });
+
+    // Delete handler
+    let dir_del = directory.to_string();
+    let id_del = id.to_string();
+    let grid_del = grid_ref.clone();
+    let container_del = container.clone();
+    delete_btn.connect_clicked(move |_| {
+        show_delete_project_dialog(&dir_del, &container_del, &grid_del);
+    });
+
     container
+}
+
+fn show_rename_project_dialog(name: &str, directory: &str, id: &str, card: &Button) {
+    let dialog = gtk::Dialog::new();
+    dialog.set_modal(true);
+    dialog.set_default_size(350, 150);
+    dialog.set_title("Rename Project");
+
+    let content = dialog.content_area();
+    content.set_margin_start(16);
+    content.set_margin_end(16);
+    content.set_margin_top(12);
+    content.set_margin_bottom(12);
+    content.set_spacing(8);
+
+    let label = Label::new(Some("New project name:"));
+    label.set_halign(Align::Start);
+    content.pack_start(&label, false, false, 0);
+
+    let entry = Entry::new();
+    entry.set_text(name);
+    content.pack_start(&entry, false, false, 0);
+
+    dialog.add_button("Cancel", gtk::ResponseType::Cancel);
+    dialog.add_button("Rename", gtk::ResponseType::Ok);
+    dialog.show_all();
+
+    let response = dialog.run();
+    if response == gtk::ResponseType::Ok {
+        let new_name = entry.text().to_string();
+        if !new_name.trim().is_empty() && new_name != name {
+            let sandbox = dirs::config_dir()
+                .unwrap_or_else(|| std::path::PathBuf::from("."))
+                .join("vibi-ai")
+                .join("sandbox");
+            let old_path = sandbox.join(directory);
+            let new_path = sandbox.join(&new_name);
+            
+            // Rename directory on disk
+            if old_path.exists() {
+                std::fs::rename(&old_path, &new_path).ok();
+            }
+            
+            // Update .vibecode file
+            let proj_file = new_path.join(".vibecode");
+            if proj_file.exists() {
+                if let Ok(data) = std::fs::read_to_string(&proj_file) {
+                    let updated = data.replace(&format!("name={}", name), &format!("name={}", new_name));
+                    std::fs::write(&proj_file, updated).ok();
+                }
+            }
+            
+            // Update card label
+            if let Some(content) = card.child().and_then(|c| c.downcast::<GtkBox>().ok()) {
+                for child in content.children() {
+                    if let Some(lbl) = child.downcast_ref::<Label>() {
+                        if lbl.style_context().has_class("project-card-name") {
+                            lbl.set_text(&new_name);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    dialog.close();
+}
+
+fn show_delete_project_dialog(directory: &str, container: &GtkBox, grid: &Rc<RefCell<gtk::FlowBox>>) {
+    let dialog = gtk::Dialog::new();
+    dialog.set_modal(true);
+    dialog.set_default_size(350, 150);
+    dialog.set_title("Delete Project");
+
+    let content = dialog.content_area();
+    content.set_margin_start(16);
+    content.set_margin_end(16);
+    content.set_margin_top(12);
+    content.set_margin_bottom(12);
+
+    let label = Label::new(Some(&format!("Delete project \"{}\"?\nThis will remove the project folder from the sandbox.", directory)));
+    label.set_wrap(true);
+    label.set_halign(Align::Start);
+    content.pack_start(&label, false, false, 0);
+
+    dialog.add_button("Cancel", gtk::ResponseType::Cancel);
+    let delete_btn = dialog.add_button("Delete", gtk::ResponseType::Ok);
+    delete_btn.style_context().add_class("dialog-btn-danger");
+    dialog.show_all();
+
+    let response = dialog.run();
+    if response == gtk::ResponseType::Ok {
+        // Delete from disk
+        let sandbox = dirs::config_dir()
+            .unwrap_or_else(|| std::path::PathBuf::from("."))
+            .join("vibi-ai")
+            .join("sandbox")
+            .join(directory);
+        if sandbox.exists() {
+            std::fs::remove_dir_all(&sandbox).ok();
+        }
+        // Remove from UI grid
+        let grid_ref = grid.borrow();
+        grid_ref.remove(container);
+    }
+    dialog.close();
 }
 
 fn build_add_project_card(_projects: Rc<RefCell<Vec<Project>>>, _grid: gtk::FlowBox, stack: Stack) -> GtkBox {
@@ -821,26 +989,109 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
         restore_tree_scroll_value(&th_map, scroll_pos);
     });
     
-        // Periodic file tree refresh every 2 seconds (inotify removed due to thread safety)
-    let pd = project_directory.clone();
-    let cv = code_view.clone();
-    let tb = tab_bar.clone();
-    let th = tree_holder.clone();
-    gtk::glib::timeout_add_local(std::time::Duration::from_secs(2), move || {
-        let scroll_pos = get_tree_scroll_value(&th.borrow());
-        let holder = th.borrow();
-        for child in holder.children() {
-            holder.remove(&child);
+    // File watcher — rebuild only on actual changes (debounced)
+    let pd_watch = project_directory.clone();
+    let cv_watch = code_view.clone();
+    let tb_watch = tab_bar.clone();
+    let th_watch = tree_holder.clone();
+    
+    let (tx, rx) = async_channel::unbounded::<()>();
+    let tx_clone = tx.clone();
+    
+    // Watch sandbox directory for changes
+    let sandbox_watch = dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("vibi-ai")
+        .join("sandbox");
+    
+    std::thread::spawn(move || {
+        use inotify::{Inotify, WatchMask};
+        if let Ok(mut watcher) = Inotify::init() {
+            // Helper to recursively add watches
+            fn add_watch_recursive(watcher: &mut Inotify, path: &std::path::Path) {
+                let _ = watcher.watches().add(path, WatchMask::CREATE | WatchMask::DELETE | WatchMask::MODIFY | WatchMask::MOVED_TO | WatchMask::MOVED_FROM);
+                if let Ok(entries) = std::fs::read_dir(path) {
+                    for entry in entries.flatten() {
+                        if entry.path().is_dir() {
+                            add_watch_recursive(watcher, &entry.path());
+                        }
+                    }
+                }
+            }
+            add_watch_recursive(&mut watcher, &sandbox_watch);
+            
+            let mut buffer = [0u8; 4096];
+            loop {
+                if watcher.read_events(&mut buffer).is_ok() {
+                    // Check for new directories and watch them too
+                    add_watch_recursive(&mut watcher, &sandbox_watch);
+                    // Debounce: wait 300ms for burst of events to settle
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                    let _ = tx_clone.try_send(());
+                }
+            }
         }
-        let new_tree = build_file_tree(cv.clone(), tb.clone(), pd.clone());
-        holder.pack_start(&new_tree, true, true, 0);
-        holder.show_all();
-        drop(holder);
-        restore_tree_scroll_value(&th, scroll_pos);
-        gtk::glib::ControlFlow::Continue
+    });
+    
+    // Receive change events on main thread and rebuild
+    gtk::glib::spawn_future_local(async move {
+        while let Ok(()) = rx.recv().await {
+            let scroll_pos = get_tree_scroll_value(&th_watch.borrow());
+            let holder = th_watch.borrow();
+            for child in holder.children() {
+                holder.remove(&child);
+            }
+            let new_tree = build_file_tree(cv_watch.clone(), tb_watch.clone(), pd_watch.clone());
+            holder.pack_start(&new_tree, true, true, 0);
+            holder.show_all();
+            drop(holder);
+            restore_tree_scroll_value(&th_watch, scroll_pos);
+        }
     });
     
     root
+}
+
+fn get_icon_path(filename: &str) -> Option<String> {
+    let ext = filename.rsplit('.').next().unwrap_or("").to_lowercase();
+    let icons_dir = std::path::PathBuf::from("src/icons");
+    
+    let icon_name = match ext.as_str() {
+        "rs" => "rust-programming-language-icon.png",
+        "py" => "python-programming-language-icon.png",
+        "js" => "javascript-programming-language-icon.png",
+        "ts" => "typescript-programming-language-icon.png",
+        "jsx" | "tsx" => "react-js-icon.png",
+        "html" => "html-icon.png",
+        "css" => "css-icon.png",
+        "scss" | "sass" => "css-icon.png",
+        "json" | "xml" | "yaml" | "yml" | "toml" => "yaml-icon.png",
+        "md" | "txt" | "log" => "log-file-icon.png",
+        "c" | "h" => "c-program-icon.png",
+        "cpp" | "cc" | "cxx" | "hpp" => "c-plus-plus-programming-language-icon.png",
+        "cs" => "c-sharp-programming-language-icon.png",
+        "java" => "java-programming-language-icon.png",
+        "kt" | "kts" => "kotlin-programming-language-icon.png",
+        "swift" => "swift-programming-language-icon.png",
+        "rb" => "ruby-programming-language-icon.png",
+        "php" => "php-programming-language-icon.png",
+        "r" => "r-programming-language-icon.png",
+        "sql" | "sqlite" | "db" => "sqlite-icon.png",
+        "sh" | "bash" | "zsh" | "ps1" => "bash-unix-shell-icon.png",
+        "dart" => "dart-programming-language-icon.png",
+        "zig" => "zig-programming-language-icon.png",
+        "pl" => "perl-programming-language-icon.png",
+        "node" => "node-js-icon.png",
+        "flutter" => "flutter-icon.png",
+        _ => return None,
+    };
+    
+    let path = icons_dir.join(icon_name);
+    if path.exists() {
+        Some(path.to_string_lossy().to_string())
+    } else {
+        None
+    }
 }
 
 fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, project_directory: Rc<RefCell<Option<String>>>) -> GtkBox {
@@ -885,7 +1136,7 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
         code_view: &gtk::TextView,
         tab_bar: &Rc<RefCell<GtkBox>>,
     ) {
-        if depth > 4 { return; }
+        if depth > 6 { return; }
         if let Ok(entries) = std::fs::read_dir(path) {
             let mut items: Vec<_> = entries.filter_map(|e| e.ok()).collect();
             items.sort_by(|a, b| {
@@ -897,31 +1148,55 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
             for entry in &items {
                 let is_dir = entry.path().is_dir();
                 let name = entry.file_name().to_string_lossy().to_string();
-                let indent = "  ".repeat(depth as usize);
-                let icon = if is_dir { "📁" } else { "📄" };
-                
+                let entry_path = entry.path();
+                let path_str = entry_path.to_string_lossy().to_string();
                 let row = Button::new();
                 row.set_relief(gtk::ReliefStyle::None);
                 row.style_context().add_class("file-tree-item");
-                row.set_label(&format!("{} {}{}", icon, indent, name));
+                row.set_size_request(-1, 20);
+                
+                let row_content = GtkBox::new(Orientation::Horizontal, 4);
+                
+                if is_dir {
+                    let collapsed = is_folder_collapsed(&path_str);
+                    let arrow = if collapsed { "▶" } else { "▼" };
+                    let icon_label = Label::new(Some("📁"));
+                    icon_label.set_size_request(16, 16);
+                    row_content.pack_start(&icon_label, false, false, 0);
+                    let name_label = Label::new(Some(&format!("{} {}", arrow, name)));
+                    row_content.pack_start(&name_label, false, false, 0);
+                } else {
+                    if let Some(icon_path) = get_icon_path(&name) {
+                        if let Ok(pixbuf) = Pixbuf::from_file_at_scale(&icon_path, 14, 14, true) {
+                            let icon_image = gtk::Image::from_pixbuf(Some(&pixbuf));
+                            row_content.pack_start(&icon_image, false, false, 0);
+                        }
+                    } else {
+                        let fallback = Label::new(Some("📄"));
+                        fallback.style_context().add_class("file-tree-item");
+                        row_content.pack_start(&fallback, false, false, 0);
+                    }
+                    let name_label = Label::new(Some(&name));
+                    row_content.pack_start(&name_label, false, false, 0);
+                }
+                
+                row.add(&row_content);
                 row.set_halign(Align::Start);
                 row.set_margin_start(12 + depth * 12);
                 row.set_margin_top(1);
                 row.set_margin_bottom(1);
                 
                 if !is_dir {
-                    let file_path = entry.path();
+                    let file_path = entry_path.clone();
                     let cv = code_view.clone();
                     let tb = tab_bar.clone();
                     let file_name = name.clone();
                     row.connect_clicked(move |_| {
-                        // Load file content
                         if let Ok(content) = std::fs::read_to_string(&file_path) {
                             if let Some(buffer) = cv.buffer() {
                                 buffer.set_text(&content);
                             }
                         }
-                        // Update tabs
                         let tb_ref = tb.borrow();
                         let children = tb_ref.children();
                         for child in &children {
@@ -933,12 +1208,49 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
                         tb_ref.pack_start(&tab_label, false, false, 0);
                         tb_ref.show_all();
                     });
-                }
-                
-                parent.pack_start(&row, false, false, 0);
-                
-                if is_dir {
-                    add_directory_entries(parent, &entry.path(), depth + 1, code_view, tab_bar);
+                    parent.pack_start(&row, false, false, 0);
+                } else {
+                    // Create a container for this folder's children
+                    let children_box = Rc::new(RefCell::new(GtkBox::new(Orientation::Vertical, 0)));
+                    
+                    let collapsed = is_folder_collapsed(&path_str);
+                    if !collapsed {
+                        add_directory_entries(&*children_box.borrow(), &entry_path, depth + 1, code_view, tab_bar);
+                        children_box.borrow().show_all();
+                    }
+                    
+                    parent.pack_start(&row, false, false, 0);
+                    let child_wrapper = GtkBox::new(Orientation::Vertical, 0);
+                    child_wrapper.pack_start(&*children_box.borrow(), false, false, 0);
+                    parent.pack_start(&child_wrapper, false, false, 0);
+                    
+                    if collapsed {
+                        child_wrapper.hide();
+                    }
+                    
+                    let path_clone = path_str.clone();
+                    let cb = children_box.clone();
+                    let cw = child_wrapper.clone();
+                    let r = row.clone();
+                    let cv = code_view.clone();
+                    let tb = tab_bar.clone();
+                    row.connect_clicked(move |_| {
+                        let new_collapsed = toggle_folder_state(&path_clone);
+                        let arrow = if new_collapsed { "▶" } else { "▼" };
+                        r.set_label(&format!("{} {}", arrow, name));
+                        if new_collapsed {
+                            cw.hide();
+                        } else {
+                            let cb_ref = cb.borrow();
+                            let existing = cb_ref.children();
+                            for child in &existing {
+                                cb_ref.remove(child);
+                            }
+                            add_directory_entries(&*cb_ref, &entry_path, depth + 1, &cv, &tb);
+                            cb_ref.show_all();
+                            cw.show();
+                        }
+                    });
                 }
             }
         }
