@@ -82,8 +82,6 @@ impl AiBridge {
         container.pack_start(&webview, true, true, 0);
         container.pack_start(&input_bar, false, false, 0);
         
-        webview.load_uri("about:blank");
-        
         // Set up persistent cookies via FFI
         setup_persistent_cookies(&webview);
         
