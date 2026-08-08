@@ -81,6 +81,13 @@ pub fn build_chat_view(
     ai_bridge_rc.container.set_hexpand(true);
     ai_bridge_rc.container.set_vexpand(true);
 
+    // Clone what we need before moving into closures
+    let view_stack_dash = view_stack.clone();
+    let chat_title_dash = chat_title.clone();
+    let api_chat_dash = api_chat.clone();
+    let _bridge_send = ai_bridge_rc.clone();
+    let bridge_switch = ai_bridge_rc.clone();
+
     // === RENDERER PAGE (handles both native chat and webview) ===
     let (renderer_view, renderer_mode) = crate::ui::renderer::build_chat_renderer(
         view_stack.clone(),
@@ -90,22 +97,15 @@ pub fn build_chat_view(
         chat_store.clone(),
         ai_bridge_rc.clone(),
     );
+    
+    // === DASHBOARD PAGE (added first so it shows by default) ===
+    let dashboard = build_dashboard(chat_store.clone(), view_stack_dash.clone(), bridge_switch.clone(), chat_title_dash.clone(), api_chat_dash, renderer_mode.clone());
+    view_stack.add_titled(&dashboard, "dashboard", "Dashboard");
     view_stack.add_titled(&renderer_view, "renderer", "Renderer");
 
     root.pack_start(&view_stack, true, true, 0);
     ai_bridge_rc.container.set_hexpand(true);
     ai_bridge_rc.container.set_vexpand(true);
-
-    let _bridge_send = ai_bridge_rc.clone();
-    let bridge_switch = ai_bridge_rc.clone();
-
-    let view_stack_dash = view_stack.clone();
-    let chat_title_dash = chat_title.clone();
-    let api_chat_dash = api_chat.clone();
-
-    // === DASHBOARD PAGE ===
-    let dashboard = build_dashboard(chat_store.clone(), view_stack_dash.clone(), bridge_switch.clone(), chat_title_dash.clone(), api_chat_dash, renderer_mode.clone());
-    view_stack.add_titled(&dashboard, "dashboard", "Dashboard");
 
 
 

@@ -28,6 +28,7 @@ fn toggle_folder_state(path: &str) -> bool {
 }
 
 pub fn trigger_editor_rebuild() {
+
     EDITOR_REBUILD.with(|r| {
         if let Some(ref rebuild) = *r.borrow() {
             rebuild();
@@ -855,6 +856,81 @@ fn restore_tree_scroll_value(tree_holder: &Rc<RefCell<GtkBox>>, value: f64) {
     });
 }
 
+fn rebuild_tab_bar(
+    tab_bar: &Rc<RefCell<GtkBox>>,
+    open_tabs: &Rc<RefCell<Vec<(String, String)>>>,
+    code_view: &gtk::TextView,
+    active_index: usize,
+) {
+    // Replace the tab bar completely to avoid RefCell issues
+    let parent = tab_bar.borrow().parent();
+    let new_tb = GtkBox::new(Orientation::Horizontal, 0);
+    new_tb.style_context().add_class("editor-tab-bar");
+    
+    let tabs = open_tabs.borrow();
+    for (i, (path, name)) in tabs.iter().enumerate() {
+        let tab_box = GtkBox::new(Orientation::Horizontal, 4);
+        let tab_btn = Button::with_label(&format!("  {}  ", name));
+        tab_btn.set_relief(gtk::ReliefStyle::None);
+        tab_btn.style_context().add_class("editor-tab");
+        if i == active_index {
+            tab_btn.style_context().add_class("editor-tab-active");
+        }
+        tab_box.pack_start(&tab_btn, false, false, 0);
+        
+        let close_btn = Button::with_label("x");
+        close_btn.set_relief(gtk::ReliefStyle::None);
+        close_btn.style_context().add_class("editor-tab-close");
+        tab_box.pack_start(&close_btn, false, false, 0);
+        new_tb.pack_start(&tab_box, false, false, 0);
+        
+        // Click handlers
+        let tabs_clone = open_tabs.clone();
+        let cv_clone = code_view.clone();
+        let file_path_tab = path.clone();
+        let file_path_close = path.clone();
+        let file_name = name.clone();
+        let tb_for_tab = tab_bar.clone();
+        tab_btn.connect_clicked(move |_| {
+            if let Ok(content) = std::fs::read_to_string(&file_path_tab) {
+                if let Some(buffer) = cv_clone.buffer() {
+                    buffer.set_text(&content);
+                }
+            }
+            let new_active = tabs_clone.borrow().iter().position(|(p, _)| p == &file_path_tab).unwrap_or(0);
+            rebuild_tab_bar(&tb_for_tab, &tabs_clone, &cv_clone, new_active);
+        });
+        
+        let tabs_close = open_tabs.clone();
+        let tb_close = tab_bar.clone();
+        let cv_close = code_view.clone();
+        close_btn.connect_clicked(move |_| {
+            let mut tabs = tabs_close.borrow_mut();
+            tabs.retain(|(p, _)| p != &file_path_close);
+            if tabs.is_empty() {
+                if let Some(buffer) = cv_close.buffer() {
+                    buffer.set_text("");
+                }
+                crate::ui::code_editor::trigger_editor_rebuild();
+            }
+            let new_active = 0;
+            rebuild_tab_bar(&tb_close, &tabs_close, &cv_close, new_active);
+        });
+    }
+    
+    if let Some(parent) = parent {
+        if let Some(container) = parent.downcast_ref::<GtkBox>() {
+            container.remove(&*tab_bar.borrow());
+            container.pack_start(&new_tb, false, false, 0);
+            container.reorder_child(&new_tb, 0);
+        }
+    }
+    
+    // Store new tab bar
+    *tab_bar.borrow_mut() = new_tb;
+    tab_bar.borrow().show_all();
+}
+
 fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<String>>>) -> GtkBox {
     let root = GtkBox::new(Orientation::Vertical, 0);
     root.set_hexpand(true);
@@ -897,6 +973,9 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
     let tab_bar = Rc::new(RefCell::new(GtkBox::new(Orientation::Horizontal, 0)));
     tab_bar.borrow().style_context().add_class("editor-tab-bar");
     
+    // Track open tabs: (file_path, file_name)
+    let open_tabs: Rc<RefCell<Vec<(String, String)>>> = Rc::new(RefCell::new(Vec::new()));
+    
     let code_view = gtk::TextView::new();
     code_view.set_vexpand(true);
     code_view.set_hexpand(true);
@@ -905,14 +984,44 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
     code_view.set_left_margin(12);
     code_view.set_top_margin(8);
     code_view.set_editable(true);
+    code_view.set_cursor_visible(true);
     
     let code_scroll = ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
     code_scroll.set_policy(PolicyType::Automatic, PolicyType::Automatic);
     code_scroll.add(&code_view);
 
+    // Welcome overlay
+    let welcome_overlay = gtk::Overlay::new();
+    welcome_overlay.add(&code_scroll);
+    
+    let welcome_box = GtkBox::new(Orientation::Vertical, 16);
+    welcome_box.set_halign(Align::Center);
+    welcome_box.set_valign(Align::Center);
+    welcome_box.set_hexpand(true);
+    welcome_box.set_vexpand(true);
+    
+    let claw_icon = Label::new(Some("V"));
+    claw_icon.style_context().add_class("welcome-claw-icon");
+    claw_icon.set_halign(Align::Center);
+    welcome_box.pack_start(&claw_icon, false, false, 0);
+    
+    let welcome_title = Label::new(Some("VibiClaw Code Editor"));
+    welcome_title.style_context().add_class("welcome-title-text");
+    welcome_title.set_halign(Align::Center);
+    welcome_box.pack_start(&welcome_title, false, false, 0);
+    
+    let welcome_sub = Label::new(Some("Open a file from the tree to start editing"));
+    welcome_sub.style_context().add_class("welcome-sub-text");
+    welcome_sub.set_halign(Align::Center);
+    welcome_box.pack_start(&welcome_sub, false, false, 0);
+    
+    welcome_overlay.add_overlay(&welcome_box);
+    
+    let welcome_ref = Rc::new(RefCell::new(welcome_box));
+
     // File tree holder — stable reference for rebuilds
     let tree_holder = Rc::new(RefCell::new(GtkBox::new(Orientation::Vertical, 0)));
-    let file_tree = build_file_tree(code_view.clone(), tab_bar.clone(), project_directory.clone());
+    let file_tree = build_file_tree(code_view.clone(), tab_bar.clone(), project_directory.clone(), welcome_ref.clone(), open_tabs.clone());
     tree_holder.borrow().pack_start(&file_tree, true, true, 0);
 
     editor_box.pack_start(&*tree_holder.borrow(), false, false, 0);
@@ -932,7 +1041,7 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
     editor_area.pack_start(&dir_label, false, false, 0);
     editor_area.pack_start(&*tab_bar.borrow(), false, false, 0);
     editor_area.pack_start(&Separator::new(Orientation::Horizontal), false, false, 0);
-    editor_area.pack_start(&code_scroll, true, true, 0);
+    editor_area.pack_start(&welcome_overlay, true, true, 0);
 
     editor_box.pack_start(&editor_area, true, true, 0);
     editor_scroll.add(&editor_box);
@@ -944,11 +1053,13 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
     let tb_rebuild = tab_bar.clone();
     let th_rebuild = tree_holder.clone();
     let dl_rebuild = dir_label_clone.clone();
+    let wr_rebuild = welcome_ref.clone();
+    let ot_rebuild = open_tabs.clone();
     EDITOR_REBUILD.with(|r| {
         *r.borrow_mut() = Some(Box::new(move || {
             let dir_text = match pd_rebuild.borrow().as_ref() {
-                Some(d) => format!("📂 Project: {}", d),
-                None => "📂 Sandbox (root)".to_string(),
+                Some(d) => format!("Project: {}", d),
+                None => "Sandbox (root)".to_string(),
             };
             dl_rebuild.set_text(&dir_text);
             let scroll_pos = get_tree_scroll_value(&th_rebuild.borrow());
@@ -956,7 +1067,7 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
             for child in holder.children() {
                 holder.remove(&child);
             }
-            let new_tree = build_file_tree(cv_rebuild.clone(), tb_rebuild.clone(), pd_rebuild.clone());
+            let new_tree = build_file_tree(cv_rebuild.clone(), tb_rebuild.clone(), pd_rebuild.clone(), wr_rebuild.clone(), ot_rebuild.clone());
             holder.pack_start(&new_tree, true, true, 0);
             holder.show_all();
             drop(holder);
@@ -970,10 +1081,12 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
     let tb_map = tab_bar.clone();
     let th_map = tree_holder.clone();
     let dl_map = dir_label_clone.clone();
+    let wr_map = welcome_ref.clone();
+    let ot_map = open_tabs.clone();
     root.connect_map(move |_| {
         let dir_text = match pd_map.borrow().as_ref() {
-            Some(d) => format!("📂 Project: {}", d),
-            None => "📂 Sandbox (root)".to_string(),
+            Some(d) => format!("Project: {}", d),
+            None => "Sandbox (root)".to_string(),
         };
         dl_map.set_text(&dir_text);
 
@@ -982,7 +1095,7 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
         for child in holder.children() {
             holder.remove(&child);
         }
-        let new_tree = build_file_tree(cv_map.clone(), tb_map.clone(), pd_map.clone());
+        let new_tree = build_file_tree(cv_map.clone(), tb_map.clone(), pd_map.clone(), wr_map.clone(), ot_map.clone());
         holder.pack_start(&new_tree, true, true, 0);
         holder.show_all();
         drop(holder);
@@ -994,6 +1107,8 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
     let cv_watch = code_view.clone();
     let tb_watch = tab_bar.clone();
     let th_watch = tree_holder.clone();
+    let wr_watch = welcome_ref.clone();
+    let ot_watch = open_tabs.clone();
     
     let (tx, rx) = async_channel::unbounded::<()>();
     let tx_clone = tx.clone();
@@ -1041,7 +1156,8 @@ fn build_code_editor_page(stack: Stack, project_directory: Rc<RefCell<Option<Str
             for child in holder.children() {
                 holder.remove(&child);
             }
-            let new_tree = build_file_tree(cv_watch.clone(), tb_watch.clone(), pd_watch.clone());
+            let wr_watch = welcome_ref.clone();
+            let new_tree = build_file_tree(cv_watch.clone(), tb_watch.clone(), pd_watch.clone(), wr_watch.clone(), ot_watch.clone());
             holder.pack_start(&new_tree, true, true, 0);
             holder.show_all();
             drop(holder);
@@ -1094,7 +1210,7 @@ fn get_icon_path(filename: &str) -> Option<String> {
     }
 }
 
-fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, project_directory: Rc<RefCell<Option<String>>>) -> GtkBox {
+fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, project_directory: Rc<RefCell<Option<String>>>, welcome_overlay: Rc<RefCell<GtkBox>>, open_tabs: Rc<RefCell<Vec<(String, String)>>>) -> GtkBox {
     let container = GtkBox::new(Orientation::Vertical, 0);
     container.set_size_request(220, -1);
     container.style_context().add_class("file-tree");
@@ -1135,6 +1251,8 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
         depth: i32,
         code_view: &gtk::TextView,
         tab_bar: &Rc<RefCell<GtkBox>>,
+        welcome_ref: &Rc<RefCell<GtkBox>>,
+        open_tabs: &Rc<RefCell<Vec<(String, String)>>>,
     ) {
         if depth > 6 { return; }
         if let Ok(entries) = std::fs::read_dir(path) {
@@ -1191,22 +1309,27 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
                     let cv = code_view.clone();
                     let tb = tab_bar.clone();
                     let file_name = name.clone();
+                    let wref = welcome_ref.clone();
+                    let tabs = open_tabs.clone();
+                    let tb_clone = tab_bar.clone();
+                    let cv_clone = code_view.clone();
                     row.connect_clicked(move |_| {
-                        if let Ok(content) = std::fs::read_to_string(&file_path) {
-                            if let Some(buffer) = cv.buffer() {
+                        wref.borrow().hide();
+                            if let Ok(content) = std::fs::read_to_string(&file_path_tab) {
+                            if let Some(buffer) = cv_clone.buffer() {
                                 buffer.set_text(&content);
                             }
                         }
-                        let tb_ref = tb.borrow();
-                        let children = tb_ref.children();
-                        for child in &children {
-                            tb_ref.remove(child);
+                        // Add to tabs if not already open
+                        let mut tabs_mut = tabs.borrow_mut();
+                        let existing = tabs_mut.iter().position(|(p, _)| p == &file_path);
+                        if let Some(idx) = existing {
+                            rebuild_tab_bar(&tb_clone, &tabs, &cv_clone, idx);
+                        } else {
+                            tabs_mut.push((file_path.to_string_lossy().to_string(), file_name.clone()));
+                            let new_idx = tabs_mut.len() - 1;
+                            rebuild_tab_bar(&tb_clone, &tabs, &cv_clone, new_idx);
                         }
-                        let tab_label = Label::new(Some(&format!("  {}  ✕  ", file_name)));
-                        tab_label.style_context().add_class("editor-tab");
-                        tab_label.style_context().add_class("editor-tab-active");
-                        tb_ref.pack_start(&tab_label, false, false, 0);
-                        tb_ref.show_all();
                     });
                     parent.pack_start(&row, false, false, 0);
                 } else {
@@ -1215,7 +1338,7 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
                     
                     let collapsed = is_folder_collapsed(&path_str);
                     if !collapsed {
-                        add_directory_entries(&*children_box.borrow(), &entry_path, depth + 1, code_view, tab_bar);
+                        add_directory_entries(&*children_box.borrow(), &entry_path, depth + 1, code_view, tab_bar, welcome_ref, open_tabs);
                         children_box.borrow().show_all();
                     }
                     
@@ -1234,6 +1357,8 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
                     let r = row.clone();
                     let cv = code_view.clone();
                     let tb = tab_bar.clone();
+                    let wr = welcome_ref.clone();
+                    let ot = open_tabs.clone();
                     row.connect_clicked(move |_| {
                         let new_collapsed = toggle_folder_state(&path_clone);
                         let arrow = if new_collapsed { "▶" } else { "▼" };
@@ -1246,7 +1371,7 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
                             for child in &existing {
                                 cb_ref.remove(child);
                             }
-                            add_directory_entries(&*cb_ref, &entry_path, depth + 1, &cv, &tb);
+                            add_directory_entries(&*cb_ref, &entry_path, depth + 1, &cv, &tb, &wr, &ot);
                             cb_ref.show_all();
                             cw.show();
                         }
@@ -1256,7 +1381,7 @@ fn build_file_tree(code_view: gtk::TextView, tab_bar: Rc<RefCell<GtkBox>>, proje
         }
     }
     
-    add_directory_entries(&tree_list, &sandbox, 0, &code_view, &tab_bar);
+    add_directory_entries(&tree_list, &sandbox, 0, &code_view, &tab_bar, &welcome_overlay, &open_tabs);
 
     scroll.add(&tree_list);
     container.pack_start(&scroll, true, true, 0);

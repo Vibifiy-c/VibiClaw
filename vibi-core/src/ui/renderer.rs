@@ -49,20 +49,9 @@ pub fn build_chat_renderer(
     webview_page.pack_start(&ai_bridge.container, true, true, 0);
 
     let current_mode: Rc<RefCell<String>> = Rc::new(RefCell::new(String::from("native")));
-
-    let inner_clone = inner_stack.clone();
-    let mode_clone = current_mode.clone();
-    let update_visible = move || {
-        let mode = mode_clone.borrow().clone();
-        inner_clone.set_visible_child_name(if mode == "webview" { "webview" } else { "native" });
-    };
-    update_visible();
-
-    let mode_for_return = current_mode.clone();
-    container.connect_map(move |_| {
-        let mode = mode_for_return.borrow().clone();
-        inner_stack.set_visible_child_name(if mode == "webview" { "webview" } else { "native" });
-    });
+    
+    // Set default visible child
+    inner_stack.set_visible_child_name("native");
 
     (container, current_mode)
 }
