@@ -417,8 +417,10 @@ window { background-color: #000000; }
 .light .file-tree-header { color: #1a1523; }
 .light .file-tree-item { color: #6b6580; }
 .light .file-tree-item:hover { color: #1a1523; }
-.light .editor-tab-bar { background: #f5f3ff; }
-.light .editor-tab { background: #ffffff; color: #1a1523; }
+.light .editor-tab-bar { background: #f0ecf5; min-height: 35px; }
+.light .editor-tab { background: #f5f3ff; color: #6b6580; border-top: 2px solid transparent; }
+.light .editor-tab:hover { background: #ffffff; color: #1a1523; }
+.light .editor-tab-active { background: #faf9ff; color: #1a1523; border-top: 2px solid #8B00FF; }
 .light .editor-line-numbers { background: #faf9ff; }
 .light .editor-line-num { color: #a09bb8; }
 .light .editor-dir-label { color: #a09bb8; }
@@ -565,3 +567,50 @@ textview text {
     background: #f2e8f7;
     color: #e53935;
 }
+
+/* Editor */
+.editor-tab-bar { background: #050505; padding: 0; min-height: 35px; }
+.editor-tab {
+    font-size: 12px;
+    color: #9d94c4;
+    background: #0a0a0a;
+    border: none;
+    border-top: 2px solid transparent;
+    padding: 6px 14px;
+    margin: 0;
+    min-height: 35px;
+}
+.editor-tab:hover { background: #111111; color: #f0eeff; }
+.editor-tab-active {
+    background: #000000;
+    color: #f0eeff;
+    border-top: 2px solid #a020f0;
+}
+.editor-tab-close {
+    background: transparent;
+    color: transparent;
+    font-size: 12px;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-weight: bold;
+    margin-left: 4px;
+}
+.editor-tab:hover .editor-tab-close { color: #5c5480; }
+.editor-tab-close:hover { background: #3a2a45; color: #e53935; }
+
+.light .editor-tab-close { color: transparent; }
+.light .editor-tab:hover .editor-tab-close { color: #a09bb8; }
+.light .editor-tab-close:hover { background: #f2e8f7; color: #e53935; }
+
+.editor-tab-new {
+    background: transparent;
+    color: #5c5480;
+    font-size: 16px;
+    padding: 6px 12px;
+    border: none;
+    min-height: 35px;
+}
+.editor-tab-new:hover { color: #f0eeff; background: #111111; }
+
+.light .editor-tab-new { color: #a09bb8; }
+.light .editor-tab-new:hover { color: #1a1523; background: #f2e8f7; }
