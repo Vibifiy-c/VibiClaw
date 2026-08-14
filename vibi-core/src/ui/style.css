@@ -45,7 +45,7 @@ window { background-color: #000000; }
 .ai-bubble { background-color: #0d0d0d; color: #f0eeff; border: 1px solid #1a1a1a; border-radius: 12px; padding: 8px 14px; font-size: 14px; }
 .vibi-result { font-size: 12px; color: #4caf50; }
 .vibi-error { font-size: 12px; color: #e53935; }
-.floating-back-btn { background: transparent; border: 1px solid #1a1a1a; color: #9d94c4; border-radius: 8px; padding: 6px 14px; font-size: 13px; }
+.floating-back-btn { background: rgba(0, 0, 0, 0.7); border: 1px solid #2a2a2a; color: #9d94c4; border-radius: 8px; padding: 4px 10px; font-size: 14px; font-weight: bold; }
 .floating-back-btn:hover { background: #111111; color: #a020f0; }
 
 /* Dashboard */
@@ -305,7 +305,7 @@ window { background-color: #000000; }
 .light .chat-entry { color: #1a1523; }
 .light .user-bubble { background-color: #8B00FF; }
 .light .ai-bubble { background-color: #f5f3ff; color: #1a1523; border: 1px solid #ddc8eb; }
-.light .floating-back-btn { border-color: #ddc8eb; color: #6b6580; }
+.light .floating-back-btn { background: rgba(255, 255, 255, 0.85); border-color: #ddc8eb; color: #6b6580; }
 .light .floating-back-btn:hover { background: #f2e8f7; color: #8B00FF; }
 .light .dashboard-greeting { color: #1a1523; }
 .light .dashboard-quote { color: #6b6580; }
@@ -418,9 +418,15 @@ window { background-color: #000000; }
 .light .file-tree-item { color: #6b6580; }
 .light .file-tree-item:hover { color: #1a1523; }
 .light .editor-tab-bar { background: #f0ecf5; min-height: 35px; }
-.light .editor-tab { background: #f5f3ff; color: #6b6580; border-top: 2px solid transparent; }
-.light .editor-tab:hover { background: #ffffff; color: #1a1523; }
-.light .editor-tab-active { background: #faf9ff; color: #1a1523; border-top: 2px solid #8B00FF; }
+.light .editor-tab-bar scrollbar slider { background: #8B00FF; min-height: 6px; }
+.light .editor-tab-bar scrollbar slider:hover { background: #a020f0; }
+.light .editor-tab-bar scrollbar trough { background: #e8ddf5; min-height: 6px; }
+.light .editor-tab { background: #f5f3ff; border-top: 2px solid transparent; }
+.light .editor-tab:hover { background: #ffffff; }
+.light .editor-tab-active { background: #faf9ff; border-top: 2px solid #8B00FF; }
+.light .editor-tab-btn { color: #6b6580; }
+.light .editor-tab-btn:hover { color: #1a1523; }
+.light .editor-tab-btn-active { color: #1a1523; }
 .light .editor-line-numbers { background: #faf9ff; }
 .light .editor-line-num { color: #a09bb8; }
 .light .editor-dir-label { color: #a09bb8; }
@@ -570,47 +576,75 @@ textview text {
 
 /* Editor */
 .editor-tab-bar { background: #050505; padding: 0; min-height: 35px; }
-.editor-tab {
-    font-size: 12px;
-    color: #9d94c4;
+.editor-tab-bar scrollbar {
+    min-height: 6px;
+    min-width: 6px;
+    background: transparent;
+}
+.editor-tab-bar scrollbar slider {
+    min-height: 6px;
+    min-width: 6px;
+    background: #a020f0;
+    border-radius: 3px;
+}
+.editor-tab-bar scrollbar slider:hover {
+    background: #c050ff;
+}
+.editor-tab-bar scrollbar trough {
     background: #0a0a0a;
-    border: none;
+    min-height: 6px;
+}
+.editor-tab {
+    background: #0a0a0a;
     border-top: 2px solid transparent;
-    padding: 6px 14px;
     margin: 0;
     min-height: 35px;
 }
-.editor-tab:hover { background: #111111; color: #f0eeff; }
+.editor-tab:hover { background: #111111; }
 .editor-tab-active {
     background: #000000;
-    color: #f0eeff;
     border-top: 2px solid #a020f0;
 }
+.editor-tab-btn {
+    background: transparent;
+    border: none;
+    color: #9d94c4;
+    font-size: 12px;
+    padding: 6px 14px;
+    min-height: 35px;
+}
+.editor-tab-btn:hover { color: #f0eeff; }
+.editor-tab-btn-active { color: #f0eeff; }
 .editor-tab-close {
     background: transparent;
-    color: transparent;
+    color: #5c5480;
     font-size: 12px;
     padding: 0 4px;
     border-radius: 3px;
     font-weight: bold;
     margin-left: 4px;
 }
-.editor-tab:hover .editor-tab-close { color: #5c5480; }
 .editor-tab-close:hover { background: #3a2a45; color: #e53935; }
 
-.light .editor-tab-close { color: transparent; }
-.light .editor-tab:hover .editor-tab-close { color: #a09bb8; }
+.light .editor-tab-close { color: #a09bb8; }
 .light .editor-tab-close:hover { background: #f2e8f7; color: #e53935; }
 
-.editor-tab-new {
+.editor-tab-arrow {
     background: transparent;
     color: #5c5480;
-    font-size: 16px;
-    padding: 6px 12px;
+    font-size: 14px;
+    padding: 6px 10px;
     border: none;
     min-height: 35px;
+    min-width: 28px;
+    border-radius: 4px;
+    margin: 0 2px;
+    transition: background 150ms ease, color 150ms ease;
 }
+.editor-tab-arrow:hover { color: #f0eeff; background: #1a1a1a; }
+.editor-tab-arrow:disabled { color: #2a2a2a; background: transparent; }
 .editor-tab-new:hover { color: #f0eeff; background: #111111; }
 
-.light .editor-tab-new { color: #a09bb8; }
-.light .editor-tab-new:hover { color: #1a1523; background: #f2e8f7; }
+.light .editor-tab-arrow { color: #a09bb8; border-radius: 4px; margin: 0 2px; transition: background 150ms ease, color 150ms ease; }
+.light .editor-tab-arrow:hover { color: #1a1523; background: #ede0f5; }
+.light .editor-tab-arrow:disabled { color: #ddd; background: transparent; }
